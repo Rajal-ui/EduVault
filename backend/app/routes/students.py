@@ -15,15 +15,12 @@ from app.core.security import hash_password
 
 router = APIRouter(prefix="/students", tags=["Students"])
 
-# ── Get all students (admin only) ─────────────────────────────────────────────
 @router.get("/", response_model=List[StudentOut])
 def get_all_students(db: Session = Depends(get_db), _=Depends(require_admin)):
     return db.query(Student).all()
 
-# ── Get one student ───────────────────────────────────────────────────────────
 @router.get("/{student_id}", response_model=StudentOut)
 def get_student(student_id: str, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
-    # students can only access their own data
     if current_user["role"] == "student" and current_user["sub"] != student_id:
         raise HTTPException(status_code=403, detail="Access denied")
     student = db.query(Student).filter(Student.StudentID == student_id).first()
@@ -31,7 +28,6 @@ def get_student(student_id: str, db: Session = Depends(get_db), current_user: di
         raise HTTPException(status_code=404, detail="Student not found")
     return student
 
-# ── Create student (admin only) ───────────────────────────────────────────────
 @router.post("/", response_model=StudentOut, status_code=201)
 def create_student(data: StudentCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
     existing = db.query(Student).filter(Student.StudentID == data.StudentID).first()
@@ -45,7 +41,6 @@ def create_student(data: StudentCreate, db: Session = Depends(get_db), _=Depends
     db.refresh(student)
     return student
 
-# ── Update student (admin only) ───────────────────────────────────────────────
 @router.put("/{student_id}", response_model=StudentOut)
 def update_student(student_id: str, data: StudentUpdate, db: Session = Depends(get_db), _=Depends(require_admin)):
     student = db.query(Student).filter(Student.StudentID == student_id).first()
@@ -57,7 +52,6 @@ def update_student(student_id: str, data: StudentUpdate, db: Session = Depends(g
     db.refresh(student)
     return student
 
-# ── Delete student (admin only) ───────────────────────────────────────────────
 @router.delete("/{student_id}", status_code=204)
 def delete_student(student_id: str, db: Session = Depends(get_db), _=Depends(require_admin)):
     student = db.query(Student).filter(Student.StudentID == student_id).first()
@@ -66,7 +60,6 @@ def delete_student(student_id: str, db: Session = Depends(get_db), _=Depends(req
     db.delete(student)
     db.commit()
 
-# ── Marksheets ────────────────────────────────────────────────────────────────
 @router.get("/{student_id}/marks", response_model=List[MarksheetOut])
 def get_marks(student_id: str, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
     if current_user["role"] == "student" and current_user["sub"] != student_id:
@@ -81,7 +74,6 @@ def add_mark(student_id: str, data: MarksheetCreate, db: Session = Depends(get_d
     db.refresh(mark)
     return mark
 
-# ── Fee Receipts ──────────────────────────────────────────────────────────────
 @router.get("/{student_id}/fees", response_model=List[FeeReceiptOut])
 def get_fees(student_id: str, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
     if current_user["role"] == "student" and current_user["sub"] != student_id:
@@ -96,7 +88,6 @@ def add_fee(student_id: str, data: FeeReceiptCreate, db: Session = Depends(get_d
     db.refresh(receipt)
     return receipt
 
-# ── Exam Status ───────────────────────────────────────────────────────────────
 @router.get("/{student_id}/exams", response_model=List[ExamStatusOut])
 def get_exams(student_id: str, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
     if current_user["role"] == "student" and current_user["sub"] != student_id:
@@ -111,7 +102,6 @@ def add_exam(data: ExamStatusCreate, db: Session = Depends(get_db), _=Depends(re
     db.refresh(exam)
     return exam
 
-# ── Miscellaneous Records ─────────────────────────────────────────────────────
 @router.get("/{student_id}/misc", response_model=List[MiscRecordOut])
 def get_misc(student_id: str, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
     if current_user["role"] == "student" and current_user["sub"] != student_id:
