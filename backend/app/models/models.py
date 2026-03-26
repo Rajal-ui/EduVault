@@ -83,3 +83,4 @@ class MiscellaneousRecord(Base):
     RecordedOn = Column(DateTime, nullable=False)
 
     student = relationship("Student", back_populates="misc_records")
+    
