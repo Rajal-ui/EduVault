@@ -1,8 +1,4 @@
-# EduVault — Upcoming Web App Structure
-
-This file documents the folder structure that will be added
-during the FastAPI + React migration (Week 1 upgrade).
-
+# EduVault —  Web App Structure
 ```
 eduvault/
 ├── backend/                        # FastAPI application
