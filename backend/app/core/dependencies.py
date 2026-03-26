@@ -31,3 +31,4 @@ def require_student(current_user: dict = Depends(get_current_user)):
             detail="Student access required"
         )
     return current_user
+
