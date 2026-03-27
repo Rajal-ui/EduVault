@@ -110,7 +110,7 @@ python database/migrate_passwords.py
 python desktop_app/main.py
 ```
 
----
+--- 
 
 ## Demo Credentials
 
