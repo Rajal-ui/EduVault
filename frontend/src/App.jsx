@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import AdminDashboard from "./pages/AdminDashboard";
 import StudentDashboard from "./pages/StudentDashboard";
+import StudentDetail from "./pages/StudentDetail";
 
 function PrivateRoute({ children, role }) {
   const token = localStorage.getItem("token");
@@ -15,22 +16,9 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Login />} />
-      <Route
-        path="/admin"
-        element={
-          <PrivateRoute role="admin">
-            <AdminDashboard />
-          </PrivateRoute>
-        }
-      />
-      <Route
-        path="/student"
-        element={
-          <PrivateRoute role="student">
-            <StudentDashboard />
-          </PrivateRoute>
-        }
-      />
+      <Route path="/admin" element={<PrivateRoute role="admin"><AdminDashboard /></PrivateRoute>} />
+      <Route path="/admin/student/:id" element={<PrivateRoute role="admin"><StudentDetail /></PrivateRoute>} />
+      <Route path="/student" element={<PrivateRoute role="student"><StudentDashboard /></PrivateRoute>} />
     </Routes>
   );
 }
