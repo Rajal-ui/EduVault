@@ -81,9 +81,14 @@ def add_mark(student_id: str, data: MarksheetCreate, db: Session = Depends(get_d
 
 @router.post("/{student_id}/marks/bulk", status_code=201)
 def bulk_add_marks(student_id: str, data: MarksheetBulkCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
-    # 1. Process individual marks
+    # 1. Process individual marks with deduplication for the session
+    processed_keys = set()
     for m_data in data.marks:
-        # Overwrite logic: check for existing
+        unique_key = (m_data.Semester, m_data.Subject)
+        if unique_key in processed_keys:
+            continue
+        processed_keys.add(unique_key)
+
         existing = db.query(Marksheet).filter(
             Marksheet.StudentID == student_id,
             Marksheet.Semester == m_data.Semester,
@@ -110,11 +115,15 @@ def bulk_add_marks(student_id: str, data: MarksheetBulkCreate, db: Session = Dep
             existing_exam.DateReleased = data.overall_result.DateReleased
         else:
             exam = ExamStatus(**data.overall_result.model_dump())
-            # Ensure StudentID matches
             exam.StudentID = student_id
             db.add(exam)
             
-    db.commit()
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+        
     return {"message": "Marks and results updated successfully"}
 
 @router.put("/{student_id}/marks/{semester}/{subject}", response_model=MarksheetOut)

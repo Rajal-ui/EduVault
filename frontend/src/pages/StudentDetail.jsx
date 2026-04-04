@@ -63,7 +63,24 @@ export default function StudentDetail() {
       const res = await api.post("/ai/parse-marksheet", formData, {
         headers: { "Content-Type": "multipart/form-data" }
       });
-      setEditData(res.data);
+      
+      // Normalization of AI response casing
+      const raw = res.data;
+      const normalized = {
+        Semester: raw.Semester || raw.semester || "Semester 1",
+        Subjects: (raw.Subjects || raw.subjects || []).map(s => ({
+          Subject: s.Subject || s.subject || "",
+          Marks: s.Marks ?? s.marks ?? 0,
+          Grade: s.Grade || s.grade || ""
+        })),
+        Overall: raw.Overall || raw.overall ? {
+           GPA: raw.Overall?.GPA || raw.overall?.gpa || "",
+           ResultStatus: raw.Overall?.ResultStatus || raw.overall?.result_status || raw.overall?.status || "Pass",
+           DateReleased: raw.Overall?.DateReleased || raw.overall?.date_released || raw.overall?.date || new Date().toISOString().split('T')[0]
+        } : null
+      };
+
+      setEditData(normalized);
       setModal("aiVerifyMarks");
     } catch (err) {
       alert("Marksheet Scan failed: " + (err.response?.data?.detail || err.message));
@@ -412,14 +429,32 @@ function AIMarksheetVerifyModal({ studentId, data, onClose }) {
   async function handleSave() {
     setSaving(true); setError("");
     try {
+      // Clean up subjects to ensure valid numbers
+      const cleanedSubjects = subjects.map(s => ({
+        ...s,
+        Marks: isNaN(parseInt(s.Marks)) ? 0 : parseInt(s.Marks),
+        Semester: semester
+      })).filter(s => s.Subject.trim() !== "");
+
+      // Clean up overall GPA
+      const gpaNum = parseFloat(overall.GPA);
+      const cleanedOverall = (overall.GPA && !isNaN(gpaNum)) ? { 
+        ...overall, 
+        GPA: gpaNum,
+        Semester: semester, 
+        StudentID: studentId 
+      } : null;
+
       const payload = {
-        marks: subjects.map(s => ({ ...s, Semester: semester })),
-        overall_result: overall.GPA ? { ...overall, Semester: semester, StudentID: studentId } : null
+        marks: cleanedSubjects,
+        overall_result: cleanedOverall
       };
+      
       await api.post(`/students/${studentId}/marks/bulk`, payload);
       onClose();
     } catch (err) {
-      setError(err.response?.data?.detail || "Failed to save results");
+      console.error("Save error details:", err.response?.data);
+      setError(err.response?.data?.detail || "Failed to save results. Check if all required fields are filled.");
     } finally {
       setSaving(false);
     }

@@ -39,7 +39,7 @@ class Marksheet(Base):
 
     StudentID = Column(String(20), ForeignKey("Students.StudentID", ondelete="CASCADE"), primary_key=True)
     Subject   = Column(String(100), primary_key=True)
-    Semester  = Column(String(20), primary_key=True, default="Semester 1")
+    Semester  = Column(String(100), primary_key=True, default="Semester 1")
     Marks     = Column(Integer, nullable=False)
     Grade     = Column(String(5), nullable=False)
 
@@ -51,7 +51,7 @@ class ExamStatus(Base):
 
     ExamRecordID = Column(Integer, primary_key=True, autoincrement=True)
     StudentID    = Column(String(20), ForeignKey("Students.StudentID", ondelete="CASCADE"), nullable=False)
-    Semester     = Column(String(20), nullable=False)
+    Semester     = Column(String(100), nullable=False)
     GPA          = Column(DECIMAL(3, 2), nullable=False)
     ResultStatus = Column(Enum("Pass", "Fail", "ATKT", "Distinction"), default="Pass")
     DateReleased = Column(Date, nullable=False)
