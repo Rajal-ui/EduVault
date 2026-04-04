@@ -61,12 +61,14 @@ class StudentOut(BaseModel):
 
 class MarksheetCreate(BaseModel):
     Subject: str
+    Semester: str = "Semester 1"
     Marks: int
     Grade: str
 
 class MarksheetOut(BaseModel):
     StudentID: str
     Subject: str
+    Semester: str
     Marks: int
     Grade: str
 
@@ -129,3 +131,26 @@ class MiscRecordOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+# --- Update Schemas ---
+class MarksheetUpdate(BaseModel):
+    Marks: Optional[int] = None
+    Grade: Optional[str] = None
+
+class FeeReceiptUpdate(BaseModel):
+    FeeType: Optional[str] = None
+    Amount: Optional[Decimal] = None
+    PaidOn: Optional[date] = None
+    TransactionDetails: Optional[str] = None
+    Status: Optional[str] = None
+
+class ExamStatusUpdate(BaseModel):
+    GPA: Optional[Decimal] = None
+    ResultStatus: Optional[str] = None
+    DateReleased: Optional[date] = None
+
+class MiscRecordUpdate(BaseModel):
+    RecordType: Optional[str] = None
+    Details: Optional[str] = None
+    RecordedBy: Optional[str] = None
+    RecordedOn: Optional[datetime] = None

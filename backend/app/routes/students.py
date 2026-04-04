@@ -9,10 +9,10 @@ from app.database import get_db
 from app.models.models import Student, Marksheet, FeeReceipt, ExamStatus, MiscellaneousRecord
 from app.schemas.schemas import (
     StudentCreate, StudentUpdate, StudentOut,
-    MarksheetCreate, MarksheetOut,
-    FeeReceiptCreate, FeeReceiptOut,
-    ExamStatusCreate, ExamStatusOut,
-    MiscRecordCreate, MiscRecordOut
+    MarksheetCreate, MarksheetUpdate, MarksheetOut,
+    FeeReceiptCreate, FeeReceiptUpdate, FeeReceiptOut,
+    ExamStatusCreate, ExamStatusUpdate, ExamStatusOut,
+    MiscRecordCreate, MiscRecordUpdate, MiscRecordOut
 )
 from app.core.dependencies import require_admin, require_student, get_current_user
 from app.core.security import hash_password
@@ -78,6 +78,25 @@ def add_mark(student_id: str, data: MarksheetCreate, db: Session = Depends(get_d
     db.refresh(mark)
     return mark
 
+@router.put("/{student_id}/marks/{semester}/{subject}", response_model=MarksheetOut)
+def update_mark(student_id: str, semester: str, subject: str, data: MarksheetUpdate, db: Session = Depends(get_db), _=Depends(require_admin)):
+    mark = db.query(Marksheet).filter(Marksheet.StudentID == student_id, Marksheet.Semester == semester, Marksheet.Subject == subject).first()
+    if not mark:
+        raise HTTPException(status_code=404, detail="Mark not found")
+    for field, value in data.model_dump(exclude_none=True).items():
+        setattr(mark, field, value)
+    db.commit()
+    db.refresh(mark)
+    return mark
+
+@router.delete("/{student_id}/marks/{semester}/{subject}", status_code=204)
+def delete_mark(student_id: str, semester: str, subject: str, db: Session = Depends(get_db), _=Depends(require_admin)):
+    mark = db.query(Marksheet).filter(Marksheet.StudentID == student_id, Marksheet.Semester == semester, Marksheet.Subject == subject).first()
+    if not mark:
+        raise HTTPException(status_code=404, detail="Mark not found")
+    db.delete(mark)
+    db.commit()
+
 @router.get("/{student_id}/fees", response_model=List[FeeReceiptOut])
 def get_fees(student_id: str, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
     if current_user["role"] == "student" and current_user["sub"] != student_id:
@@ -91,6 +110,25 @@ def add_fee(student_id: str, data: FeeReceiptCreate, db: Session = Depends(get_d
     db.commit()
     db.refresh(receipt)
     return receipt
+
+@router.put("/fees/{receipt_id}", response_model=FeeReceiptOut)
+def update_fee(receipt_id: str, data: FeeReceiptUpdate, db: Session = Depends(get_db), _=Depends(require_admin)):
+    fee = db.query(FeeReceipt).filter(FeeReceipt.ReceiptID == receipt_id).first()
+    if not fee:
+        raise HTTPException(status_code=404, detail="Fee receipt not found")
+    for field, value in data.model_dump(exclude_none=True).items():
+        setattr(fee, field, value)
+    db.commit()
+    db.refresh(fee)
+    return fee
+
+@router.delete("/fees/{receipt_id}", status_code=204)
+def delete_fee(receipt_id: str, db: Session = Depends(get_db), _=Depends(require_admin)):
+    fee = db.query(FeeReceipt).filter(FeeReceipt.ReceiptID == receipt_id).first()
+    if not fee:
+        raise HTTPException(status_code=404, detail="Fee receipt not found")
+    db.delete(fee)
+    db.commit()
 
 @router.get("/{student_id}/exams", response_model=List[ExamStatusOut])
 def get_exams(student_id: str, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
@@ -106,6 +144,25 @@ def add_exam(data: ExamStatusCreate, db: Session = Depends(get_db), _=Depends(re
     db.refresh(exam)
     return exam
 
+@router.put("/exams/{record_id}", response_model=ExamStatusOut)
+def update_exam(record_id: int, data: ExamStatusUpdate, db: Session = Depends(get_db), _=Depends(require_admin)):
+    exam = db.query(ExamStatus).filter(ExamStatus.ExamRecordID == record_id).first()
+    if not exam:
+        raise HTTPException(status_code=404, detail="Exam record not found")
+    for field, value in data.model_dump(exclude_none=True).items():
+        setattr(exam, field, value)
+    db.commit()
+    db.refresh(exam)
+    return exam
+
+@router.delete("/exams/{record_id}", status_code=204)
+def delete_exam(record_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+    exam = db.query(ExamStatus).filter(ExamStatus.ExamRecordID == record_id).first()
+    if not exam:
+        raise HTTPException(status_code=404, detail="Exam record not found")
+    db.delete(exam)
+    db.commit()
+
 @router.get("/{student_id}/misc", response_model=List[MiscRecordOut])
 def get_misc(student_id: str, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
     if current_user["role"] == "student" and current_user["sub"] != student_id:
@@ -119,6 +176,25 @@ def add_misc(data: MiscRecordCreate, db: Session = Depends(get_db), _=Depends(re
     db.commit()
     db.refresh(record)
     return record
+
+@router.put("/misc/{record_id}", response_model=MiscRecordOut)
+def update_misc(record_id: int, data: MiscRecordUpdate, db: Session = Depends(get_db), _=Depends(require_admin)):
+    rec = db.query(MiscellaneousRecord).filter(MiscellaneousRecord.RecordID == record_id).first()
+    if not rec:
+        raise HTTPException(status_code=404, detail="Miscellaneous record not found")
+    for field, value in data.model_dump(exclude_none=True).items():
+        setattr(rec, field, value)
+    db.commit()
+    db.refresh(rec)
+    return rec
+
+@router.delete("/misc/{record_id}", status_code=204)
+def delete_misc(record_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+    rec = db.query(MiscellaneousRecord).filter(MiscellaneousRecord.RecordID == record_id).first()
+    if not rec:
+        raise HTTPException(status_code=404, detail="Miscellaneous record not found")
+    db.delete(rec)
+    db.commit()
 
 @router.post("/bulk", status_code=201)
 async def bulk_upload_students(file: UploadFile = File(...), db: Session = Depends(get_db), _=Depends(require_admin)):

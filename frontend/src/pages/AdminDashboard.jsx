@@ -4,7 +4,7 @@ import api from "../api/axios";
 
 const emptyForm = {
   StudentID: "", Name: "", Department: "", Year: "",
-  Contact: "", AcademicRecord: "", FeeStatus: "Pending",
+  Contact: "", StudentPhone: "", AcademicRecord: "", FeeStatus: "Pending",
   Password: "", DateOfBirth: "", Address: "", ParentContact: "",
 };
 
@@ -34,7 +34,7 @@ export default function AdminDashboard() {
   function openEdit(s) {
     setForm({
       StudentID: s.StudentID, Name: s.Name, Department: s.Department,
-      Year: s.Year, Contact: s.Contact || "", AcademicRecord: s.AcademicRecord || "",
+      Year: s.Year, Contact: s.Contact || "", StudentPhone: s.StudentPhone || "", AcademicRecord: s.AcademicRecord || "",
       FeeStatus: s.FeeStatus, Password: "", DateOfBirth: s.DateOfBirth || "",
       Address: s.Address || "", ParentContact: s.ParentContact || "",
     });
@@ -221,13 +221,14 @@ function Modal({ title, onClose, children }) {
   );
 }
 
-function StudentForm({ form, onChange, onSubmit, error, saving, isEdit }) {
+export function StudentForm({ form, onChange, onSubmit, error, saving, isEdit }) {
   const fields = [
     { name: "StudentID", label: "Student ID", disabled: isEdit },
     { name: "Name", label: "Full Name" },
     { name: "Department", label: "Department" },
     { name: "Year", label: "Year (1-4)", type: "number" },
-    { name: "Contact", label: "Student Phone", type: "tel" },
+    { name: "Contact", label: "Email", type: "email" },
+    { name: "StudentPhone", label: "Student Phone", type: "tel" },
     { name: "DateOfBirth", label: "Date of Birth", type: "date" },
     { name: "Address", label: "Address" },
     { name: "ParentContact", label: "Parent Phone", type: "tel" },
@@ -287,8 +288,7 @@ function StudentForm({ form, onChange, onSubmit, error, saving, isEdit }) {
   );
 }
 
-function PhoneInput({ name, value, disabled, onChange }) {
-  // Safe parsing of existing string that might look like "+91 9876543210" or just "9876543210"
+export function PhoneInput({ name, value, disabled, onChange }) {
   const valStr = value || "";
   let code = "+91";
   let number = valStr;
