@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
 from app.models.models import Student, Marksheet, FeeReceipt, ExamStatus, MiscellaneousRecord
+from app.core.academic import sync_student_semester_gpa, calculate_gpa_from_marks
 from app.schemas.schemas import (
     StudentCreate, StudentUpdate, StudentOut,
     MarksheetCreate, MarksheetUpdate, MarksheetOut,
@@ -75,6 +76,8 @@ def get_marks(student_id: str, db: Session = Depends(get_db), current_user: dict
 def add_mark(student_id: str, data: MarksheetCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
     mark = Marksheet(StudentID=student_id, **data.model_dump())
     db.add(mark)
+    db.flush() # Flush to get it in the DB session for sync
+    sync_student_semester_gpa(db, student_id, data.Semester)
     db.commit()
     db.refresh(mark)
     return mark
@@ -98,25 +101,18 @@ def bulk_add_marks(student_id: str, data: MarksheetBulkCreate, db: Session = Dep
         if existing:
             existing.Marks = m_data.Marks
             existing.Grade = m_data.Grade
+            existing.Credits = m_data.Credits
         else:
             mark = Marksheet(StudentID=student_id, **m_data.model_dump())
             db.add(mark)
             
-    # 2. Process overall result if provided
+    # 2. Automatically recalculate and sync GPA for each semester touched
+    semesters_to_sync = {m.Semester for m in data.marks}
     if data.overall_result:
-        existing_exam = db.query(ExamStatus).filter(
-            ExamStatus.StudentID == student_id,
-            ExamStatus.Semester == data.overall_result.Semester
-        ).first()
-        
-        if existing_exam:
-            existing_exam.GPA = data.overall_result.GPA
-            existing_exam.ResultStatus = data.overall_result.ResultStatus
-            existing_exam.DateReleased = data.overall_result.DateReleased
-        else:
-            exam = ExamStatus(**data.overall_result.model_dump())
-            exam.StudentID = student_id
-            db.add(exam)
+        semesters_to_sync.add(data.overall_result.Semester)
+
+    for sem in semesters_to_sync:
+        sync_student_semester_gpa(db, student_id, sem)
             
     try:
         db.commit()
@@ -124,7 +120,7 @@ def bulk_add_marks(student_id: str, data: MarksheetBulkCreate, db: Session = Dep
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
         
-    return {"message": "Marks and results updated successfully"}
+    return {"message": "Marks updated and GPA automatically recalculated."}
 
 @router.put("/{student_id}/marks/{semester}/{subject}", response_model=MarksheetOut)
 def update_mark(student_id: str, semester: str, subject: str, data: MarksheetUpdate, db: Session = Depends(get_db), _=Depends(require_admin)):
@@ -133,6 +129,8 @@ def update_mark(student_id: str, semester: str, subject: str, data: MarksheetUpd
         raise HTTPException(status_code=404, detail="Mark not found")
     for field, value in data.model_dump(exclude_none=True).items():
         setattr(mark, field, value)
+    
+    sync_student_semester_gpa(db, student_id, semester)
     db.commit()
     db.refresh(mark)
     return mark
@@ -143,6 +141,7 @@ def delete_mark(student_id: str, semester: str, subject: str, db: Session = Depe
     if not mark:
         raise HTTPException(status_code=404, detail="Mark not found")
     db.delete(mark)
+    sync_student_semester_gpa(db, student_id, semester)
     db.commit()
 
 @router.get("/{student_id}/fees", response_model=List[FeeReceiptOut])

@@ -42,6 +42,7 @@ class Marksheet(Base):
     Semester  = Column(String(100), primary_key=True, default="Semester 1")
     Marks     = Column(Integer, nullable=False)
     Grade     = Column(String(5), nullable=False)
+    Credits   = Column(Integer, default=4, nullable=False)
 
     student = relationship("Student", back_populates="marksheets")
 

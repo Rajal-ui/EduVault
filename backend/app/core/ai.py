@@ -110,7 +110,8 @@ async def parse_marksheet_image(image_bytes: bytes, mime_type: str = "image/jpeg
         {
           "Subject": "string (Exact name of the subject)",
           "Marks": number (numerical marks, e.g. 85),
-          "Grade": "string (A, B+, S, etc.)"
+          "Grade": "string (A, B+, S, etc.)",
+          "Credits": number (credit hours/units, e.g. 3 or 4)
         }
       ],
       "Overall": {

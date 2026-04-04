@@ -3,6 +3,35 @@ import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import { StudentForm } from "./AdminDashboard";
 
+// --- Academic Utilities ---
+const getGradeFromMarks = (marks) => {
+  const m = parseInt(marks);
+  if (isNaN(m)) return "F";
+  if (m >= 90) return "O";
+  if (m >= 80) return "A+";
+  if (m >= 70) return "A";
+  if (m >= 60) return "B+";
+  if (m >= 50) return "B";
+  if (m >= 45) return "C";
+  if (m >= 40) return "P";
+  return "F";
+};
+
+const calculateGPA = (subs) => {
+  const gradePoints = { 'O': 10, 'A+': 9, 'A': 8, 'B+': 7, 'B': 6, 'C': 5, 'P': 4, 'F': 0, 'AB': 0 };
+  let totalPoints = 0, totalCredits = 0;
+  subs.forEach(s => {
+    const grade = s.Grade?.toUpperCase().trim() || "F";
+    const p = gradePoints[grade] ?? 0;
+    const c = parseInt(s.Credits) || 0;
+    totalPoints += (p * c);
+    totalCredits += c;
+  });
+  const gpa = totalCredits > 0 ? (totalPoints / totalCredits).toFixed(2) : "0.00";
+  const status = parseFloat(gpa) >= 4.0 ? (parseFloat(gpa) >= 8.5 ? "Distinction" : "Pass") : "Fail";
+  return { gpa, status };
+};
+
 export default function StudentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -21,6 +50,19 @@ export default function StudentDetail() {
   const [saving, setSaving] = useState(false);
   const [insight, setInsight] = useState(null);
   const [loadingInsight, setLoadingInsight] = useState(false);
+
+  function getGradeFromMarks(marks) {
+    const m = parseInt(marks);
+    if (isNaN(m)) return "F";
+    if (m >= 90) return "O";
+    if (m >= 80) return "A+";
+    if (m >= 70) return "A";
+    if (m >= 60) return "B+";
+    if (m >= 50) return "B";
+    if (m >= 45) return "C";
+    if (m >= 40) return "P";
+    return "F";
+  }
 
   function fetchAll() {
     Promise.all([
@@ -70,11 +112,15 @@ export default function StudentDetail() {
       const raw = res.data;
       const normalized = {
         Semester: raw.Semester || raw.semester || "Semester 1",
-        Subjects: (raw.Subjects || raw.subjects || []).map(s => ({
-          Subject: s.Subject || s.subject || "",
-          Marks: s.Marks ?? s.marks ?? 0,
-          Grade: s.Grade || s.grade || ""
-        })),
+        Subjects: (raw.Subjects || raw.subjects || []).map(s => {
+          const marks = s.Marks ?? s.marks ?? 0;
+          return {
+            Subject: s.Subject || s.subject || "",
+            Marks: marks,
+            Grade: getGradeFromMarks(marks), // Better: Auto-derive from marks immediately
+            Credits: parseInt(s.Credits || s.credits || 4)
+          };
+        }),
         Overall: raw.Overall || raw.overall ? {
            GPA: raw.Overall?.GPA || raw.overall?.gpa || "",
            ResultStatus: raw.Overall?.ResultStatus || raw.overall?.result_status || raw.overall?.status || "Pass",
@@ -249,12 +295,6 @@ export default function StudentDetail() {
                          <input type="file" accept="image/*" className="hidden" onChange={handleAIMarksheetScan} disabled={isScanning} />
                        </label>
                        <button onClick={() => setModal("marks")} className="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold uppercase tracking-wider">+ Add Subject</button>
-                       {semExam && (
-                         <>
-                           <button onClick={() => {setEditData(semExam); setModal("editExam")}} className="text-[10px] bg-gray-200 text-gray-700 px-2 py-1 rounded font-bold uppercase tracking-wider text-xs">Edit Result</button>
-                           <button onClick={() => genericDelete(`/students/exams/${semExam.ExamRecordID}`, `Delete result for ${sem}?`)} className="text-[10px] bg-red-100 text-red-600 px-2 py-1 rounded font-bold uppercase tracking-wider">Delete</button>
-                         </>
-                       )}
                     </div>
                   </div>
 
@@ -484,6 +524,12 @@ function AIMarksheetVerifyModal({ studentId, data, onClose }) {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
+  // Auto-calculate GPA whenever subjects or credits change
+  useEffect(() => {
+    const calc = calculateGPA(subjects);
+    setOverall(prev => ({ ...prev, GPA: calc.gpa, ResultStatus: calc.status }));
+  }, [subjects]);
+
   async function handleSave() {
     setSaving(true); setError("");
     try {
@@ -491,6 +537,7 @@ function AIMarksheetVerifyModal({ studentId, data, onClose }) {
       const cleanedSubjects = subjects.map(s => ({
         ...s,
         Marks: isNaN(parseInt(s.Marks)) ? 0 : parseInt(s.Marks),
+        Credits: isNaN(parseInt(s.Credits)) ? 4 : parseInt(s.Credits),
         Semester: semester
       })).filter(s => s.Subject.trim() !== "");
 
@@ -520,7 +567,18 @@ function AIMarksheetVerifyModal({ studentId, data, onClose }) {
 
   const updateSubject = (idx, field, val) => {
     const next = [...subjects];
-    next[idx][field] = field === "Marks" ? parseInt(val) : val;
+    const item = { ...next[idx] };
+    
+    if (field === "Marks") {
+      item.Marks = parseInt(val) || 0;
+      item.Grade = getGradeFromMarks(val);
+    } else if (field === "Credits") {
+      item.Credits = parseInt(val) || 0;
+    } else {
+      item[field] = val;
+    }
+    
+    next[idx] = item;
     setSubjects(next);
   };
 
@@ -534,13 +592,14 @@ function AIMarksheetVerifyModal({ studentId, data, onClose }) {
       <div className="max-h-60 overflow-y-auto border rounded-xl">
         <table className="w-full text-xs">
           <thead className="bg-gray-50 text-gray-500 uppercase sticky top-0">
-            <tr><th className="px-3 py-2 text-left">Subject</th><th className="px-3 py-2 text-left w-16">Marks</th><th className="px-3 py-2 text-left w-16">Grade</th></tr>
+            <tr><th className="px-3 py-2 text-left">Subject</th><th className="px-3 py-2 text-left w-16">Marks</th><th className="px-3 py-2 text-left w-16">Credits</th><th className="px-3 py-2 text-left w-16">Grade</th></tr>
           </thead>
           <tbody className="divide-y">
             {subjects.map((s, idx) => (
               <tr key={idx}>
                 <td className="px-3 py-1"><input value={s.Subject} onChange={e => updateSubject(idx, "Subject", e.target.value)} className="w-full border-none focus:ring-0 p-0 h-7" /></td>
                 <td className="px-3 py-1"><input value={s.Marks} type="number" onChange={e => updateSubject(idx, "Marks", e.target.value)} className="w-full border-none focus:ring-0 p-0 h-7" /></td>
+                <td className="px-3 py-1"><input value={s.Credits} type="number" onChange={e => updateSubject(idx, "Credits", e.target.value)} className="w-full border-none focus:ring-0 p-0 h-7 font-bold text-purple-600" /></td>
                 <td className="px-3 py-1"><input value={s.Grade} onChange={e => updateSubject(idx, "Grade", e.target.value)} className="w-full border-none focus:ring-0 p-0 h-7" /></td>
               </tr>
             ))}
@@ -548,20 +607,14 @@ function AIMarksheetVerifyModal({ studentId, data, onClose }) {
         </table>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 border p-3 rounded-xl bg-gray-50">
+      <div className="grid grid-cols-2 gap-3 border p-3 rounded-xl bg-gray-50">
         <div>
-          <label className="block text-[10px] font-bold text-gray-500 uppercase">GPA</label>
-          <input type="number" step="0.01" value={overall.GPA} onChange={e => setOverall({...overall, GPA: e.target.value})} className="w-full bg-white border rounded p-1 text-xs" />
+          <label className="block text-[10px] font-bold text-gray-500 uppercase">Calculated GPA</label>
+          <div className="w-full bg-white border rounded p-1.5 text-sm font-bold text-blue-700">{overall.GPA}</div>
         </div>
         <div>
           <label className="block text-[10px] font-bold text-gray-500 uppercase">Status</label>
-          <select value={overall.ResultStatus} onChange={e => setOverall({...overall, ResultStatus: e.target.value})} className="w-full bg-white border rounded p-1 text-xs">
-            {["Pass","Fail","ATKT","Distinction"].map(v => <option key={v}>{v}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-[10px] font-bold text-gray-500 uppercase">Date</label>
-          <input type="date" value={overall.DateReleased} onChange={e => setOverall({...overall, DateReleased: e.target.value})} className="w-full bg-white border rounded p-1 text-xs" />
+          <div className="w-full bg-white border rounded p-1.5 text-sm font-bold text-purple-700">{overall.ResultStatus}</div>
         </div>
       </div>
       
@@ -578,12 +631,18 @@ function AIMarksheetVerifyModal({ studentId, data, onClose }) {
 }
 
 function AddMarkModal({ studentId, onClose }) {
-  const { form, onChange, error, setError, saving, setSaving } = useForm({ Semester: "Semester 1", Subject: "", Marks: "", Grade: "" });
+  const { form, onChange, error, setError, saving, setSaving, setForm } = useForm({ Semester: "Semester 1", Subject: "", Marks: "", Grade: "", Credits: "4" });
+
+  const handleMarksChange = (e) => {
+    const val = e.target.value;
+    const grade = getGradeFromMarks(val);
+    setForm(f => ({ ...f, Marks: val, Grade: grade }));
+  };
 
   async function submit(e) {
     e.preventDefault(); setSaving(true); setError("");
     try {
-      await api.post(`/students/${studentId}/marks`, { ...form, Marks: parseInt(form.Marks) });
+      await api.post(`/students/${studentId}/marks`, { ...form, Marks: parseInt(form.Marks), Credits: parseInt(form.Credits) });
       onClose();
     } catch (err) { setError(err.response?.data?.detail || "Failed"); }
     finally { setSaving(false); }
@@ -592,11 +651,17 @@ function AddMarkModal({ studentId, onClose }) {
   return (
     <Modal title="Add Mark" onClose={onClose}>
       <form onSubmit={submit} className="space-y-3">
-        {[["Semester", "Semester", "text"], ["Subject", "Subject", "text"], ["Marks", "Marks (0–100)", "number"], ["Grade", "Grade (A/B/C…)", "text"]].map(([name, label, type]) => (
+        {[["Semester", "Semester", "text"], ["Subject", "Subject", "text"], ["Marks", "Marks (0–100)", "number"], ["Credits", "Credits", "number"], ["Grade", "Grade (A/B/C…)", "text"]].map(([name, label, type]) => (
           <div key={name}>
             <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-            <input type={type} name={name} value={form[name]} onChange={onChange} required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <input 
+              type={type} 
+              name={name} 
+              value={form[name]} 
+              onChange={name === "Marks" ? handleMarksChange : onChange} 
+              required
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" 
+            />
           </div>
         ))}
         {error && <p className="text-red-500 text-sm">{error}</p>}
@@ -611,7 +676,13 @@ function AddMarkModal({ studentId, onClose }) {
 }
 
 function EditMarkModal({ studentId, data, onClose }) {
-  const { form, onChange, error, setError, saving, setSaving } = useForm({ Marks: data.Marks, Grade: data.Grade });
+  const { form, onChange, error, setError, saving, setSaving, setForm } = useForm({ Marks: data.Marks, Grade: data.Grade });
+
+  const handleMarksChange = (e) => {
+    const val = e.target.value;
+    const grade = getGradeFromMarks(val);
+    setForm(f => ({ ...f, Marks: val, Grade: grade }));
+  };
 
   async function submit(e) {
     e.preventDefault(); setSaving(true); setError("");
@@ -628,8 +699,14 @@ function EditMarkModal({ studentId, data, onClose }) {
         {[["Marks", "Marks (0–100)", "number"], ["Grade", "Grade", "text"]].map(([name, label, type]) => (
           <div key={name}>
             <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-            <input type={type} name={name} value={form[name]} onChange={onChange} required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <input 
+              type={type} 
+              name={name} 
+              value={form[name]} 
+              onChange={name === "Marks" ? handleMarksChange : onChange} 
+              required
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" 
+            />
           </div>
         ))}
         {error && <p className="text-red-500 text-sm">{error}</p>}

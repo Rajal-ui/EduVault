@@ -64,6 +64,7 @@ class MarksheetCreate(BaseModel):
     Semester: str = "Semester 1"
     Marks: int
     Grade: str
+    Credits: int = 4
 
 class MarksheetOut(BaseModel):
     StudentID: str
@@ -71,6 +72,7 @@ class MarksheetOut(BaseModel):
     Semester: str
     Marks: int
     Grade: str
+    Credits: int
 
     class Config:
         from_attributes = True
