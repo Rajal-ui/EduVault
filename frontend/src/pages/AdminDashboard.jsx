@@ -17,6 +17,7 @@ export default function AdminDashboard() {
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const name = localStorage.getItem("name");
   const navigate = useNavigate();
 
@@ -71,6 +72,41 @@ export default function AdminDashboard() {
     } catch { alert("Failed to delete student"); }
   }
 
+  async function handleExport() {
+    try {
+      const res = await api.get("/students/export/csv", { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "students.csv");
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+    } catch (err) {
+      alert("Export failed");
+    }
+  }
+
+  async function handleImport(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("file", file);
+    setUploading(true);
+    try {
+      const res = await api.post("/students/bulk", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      alert(res.data.message + (res.data.errors?.length ? "\nErrors:\n" + res.data.errors.join("\n") : ""));
+      fetchStudents();
+    } catch (err) {
+      alert(err.response?.data?.detail || "Import failed");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-blue-700 text-white px-6 py-4 flex justify-between items-center">
@@ -84,9 +120,18 @@ export default function AdminDashboard() {
       <main className="p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-gray-800">All Students</h2>
-          <button onClick={openAdd} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
-            + Add Student
-          </button>
+          <div className="flex gap-2">
+            <button onClick={handleExport} className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700">
+              Export CSV
+            </button>
+            <label className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-700 cursor-pointer flex items-center">
+              {uploading ? "Uploading..." : "Import CSV"}
+              <input type="file" accept=".csv" className="hidden" onChange={handleImport} disabled={uploading} />
+            </label>
+            <button onClick={openAdd} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
+              + Add Student
+            </button>
+          </div>
         </div>
 
         {loading ? (

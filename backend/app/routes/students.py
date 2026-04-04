@@ -1,4 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi.responses import StreamingResponse
+import csv
+import io
+import datetime
 from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
@@ -115,3 +119,85 @@ def add_misc(data: MiscRecordCreate, db: Session = Depends(get_db), _=Depends(re
     db.commit()
     db.refresh(record)
     return record
+
+@router.post("/bulk", status_code=201)
+async def bulk_upload_students(file: UploadFile = File(...), db: Session = Depends(get_db), _=Depends(require_admin)):
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="Only CSV files are allowed")
+    
+    contents = await file.read()
+    decoded = contents.decode('utf-8')
+    reader = csv.DictReader(io.StringIO(decoded))
+    
+    added = 0
+    errors = []
+    
+    for row_idx, row in enumerate(reader, start=1):
+        try:
+            # Check if exists
+            existing = db.query(Student).filter(Student.StudentID == row.get("StudentID")).first()
+            if existing:
+                errors.append(f"Row {row_idx}: StudentID {row.get('StudentID')} already exists.")
+                continue
+                
+            dob_str = row.get("DateOfBirth", "").strip()
+            parsed_dob = None
+            if dob_str:
+                for fmt in ("%Y-%m-%d", "%d-%m-%Y", "%m/%d/%Y", "%d/%m/%Y"):
+                    try:
+                        parsed_dob = datetime.datetime.strptime(dob_str, fmt).date()
+                        break
+                    except ValueError:
+                        pass
+                if not parsed_dob:
+                    errors.append(f"Row {row_idx}: Could not parse date format for '{dob_str}'. Use YYYY-MM-DD.")
+                    continue
+
+            student_data = {
+                "StudentID": row.get("StudentID"),
+                "Name": row.get("Name"),
+                "Department": row.get("Department"),
+                "Year": int(row.get("Year") or 1),
+                "Contact": row.get("Contact"),
+                "AcademicRecord": row.get("AcademicRecord"),
+                "FeeStatus": row.get("FeeStatus") or "Pending",
+                "Password": hash_password(row.get("Password", "default123")),
+                "DateOfBirth": parsed_dob,
+                "Address": row.get("Address"),
+                "ParentContact": row.get("ParentContact"),
+            }
+            student = Student(**student_data)
+            db.add(student)
+            added += 1
+        except Exception as e:
+            errors.append(f"Row {row_idx}: Error - {str(e)}")
+            
+    db.commit()
+    return {"message": f"Successfully added {added} students.", "errors": errors}
+
+@router.get("/export/csv")
+def export_students_csv(db: Session = Depends(get_db), _=Depends(require_admin)):
+    students = db.query(Student).all()
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Headers
+    writer.writerow([
+        "StudentID", "Name", "Department", "Year", "Contact", 
+        "AcademicRecord", "FeeStatus", "DateOfBirth", "Address", "ParentContact"
+    ])
+    
+    for s in students:
+        writer.writerow([
+            s.StudentID, s.Name, s.Department, s.Year, s.Contact,
+            s.AcademicRecord, s.FeeStatus, s.DateOfBirth, s.Address, s.ParentContact
+        ])
+        
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=students_export.csv"}
+    )
+
