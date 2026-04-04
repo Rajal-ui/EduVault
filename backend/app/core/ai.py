@@ -141,3 +141,34 @@ async def parse_marksheet_image(image_bytes: bytes, mime_type: str = "image/jpeg
         logger.error(f"Error parsing marksheet with AI: {e}")
         print(f"DEBUG Marksheet ERROR: {str(e)}") # Exact error visibility
         return None
+async def generate_student_insight(student_data: dict):
+    """
+    Analyzes student performance, behavior, and administrative records to provide insights.
+    """
+    prompt = f"""
+    You are an expert academic counselor and administrator for EduVault.
+    Analyze the following student data and provide a high-quality, professional, and actionable insight report in Markdown format.
+       
+    Data provided (JSON):
+    {json.dumps(student_data, indent=2, default=str)}
+    
+    EXPECTED REPORT STRUCTURE:
+    1.  ### 📊 Academic Performance Summary:
+        - Analyze GPA trends across semesters.
+        - Highlight top-performing and struggling subjects.
+    2.  ### 📝 Behavioral & Administrative Analysis:
+        - Comment on fee payment status and patterns.
+        - Analyze miscellaneous records (warnings, attendance, achievements).
+    3.  ### 💡 Strategic Recommendations:
+        - Provide 3-4 specific, actionable steps for the student to improve.
+        - Provide 1 recommendation for the administration.
+
+    Tone: Encouraging yet professional. Use emojis sparingly for high readability.
+    Only return the Markdown content.
+    """
+    try:
+        response = model.generate_content(prompt)
+        return response.text.strip()
+    except Exception as e:
+        logger.error(f"Error generating student insight: {e}")
+        return "⚠️ AI was unable to generate an insight report at this time. Please check student records manually."

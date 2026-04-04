@@ -19,6 +19,8 @@ export default function StudentDetail() {
   const [error, setError] = useState("");
   const [isScanning, setIsScanning] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [insight, setInsight] = useState(null);
+  const [loadingInsight, setLoadingInsight] = useState(false);
 
   function fetchAll() {
     Promise.all([
@@ -92,6 +94,18 @@ export default function StudentDetail() {
 
   useEffect(() => { fetchAll(); }, [id]);
 
+  async function generateInsight() {
+    setLoadingInsight(true);
+    try {
+      const res = await api.get(`/ai/insights/${id}`);
+      setInsight(res.data.insight);
+    } catch (err) {
+      alert("Failed to generate AI insights");
+    } finally {
+      setLoadingInsight(false);
+    }
+  }
+
   if (!student) return <div className="p-8 text-gray-500">Loading...</div>;
 
   function openEdit() {
@@ -148,7 +162,16 @@ export default function StudentDetail() {
         <div className="bg-white rounded-xl shadow p-5">
           <div className="flex justify-between items-center mb-3">
             <h2 className="font-semibold text-gray-700">Profile</h2>
-            <button onClick={openEdit} className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-lg border font-medium">Edit Profile</button>
+            <div className="flex gap-2">
+              <button 
+                onClick={generateInsight} 
+                disabled={loadingInsight}
+                className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1 rounded-lg border border-blue-200 font-bold flex items-center gap-1 disabled:opacity-50"
+              >
+                {loadingInsight ? "Analyzing..." : "✨ AI Insight"}
+              </button>
+              <button onClick={openEdit} className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-lg border font-medium">Edit Profile</button>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3 text-sm">
             {[
@@ -173,6 +196,41 @@ export default function StudentDetail() {
             </div>
           </div>
         </div>
+
+        {insight && (
+          <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl shadow-sm border border-blue-100 p-6 relative overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+               <span className="text-6xl font-black text-blue-600">AI</span>
+            </div>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-bold text-blue-900 flex items-center gap-2">
+                <span className="text-xl">✨</span> Student Performance Analysis
+              </h2>
+              <button onClick={() => setInsight(null)} className="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+            <div className="prose prose-sm max-w-none text-gray-700 space-y-4">
+              <div className="whitespace-pre-wrap leading-relaxed font-sans text-sm">
+                {insight.split('\n').map((line, i) => {
+                  let cleaned = line.replace(/^\d+\.\s+###\s+/, '### ').replace(/^\*\*/, '').replace(/\*\*$/, '').replace(/\*\*(.*?)\*\*/g, '$1');
+                  
+                  if (cleaned.startsWith('### ')) {
+                    return <h3 key={i} className="text-lg font-bold text-blue-800 mt-6 mb-2 border-b border-blue-100 pb-1">{cleaned.replace('### ', '').replace(/\*/g, '')}</h3>;
+                  }
+                  if (cleaned.startsWith('- ') || cleaned.startsWith('* ')) {
+                    const content = cleaned.replace(/^[-*]\s+/, '').replace(/\*/g, '');
+                    return <div key={i} className="flex gap-2 items-start ml-2 mb-1"><span className="text-blue-400 mt-1">•</span><span>{content}</span></div>;
+                  }
+                  
+                  return <p key={i} className={cleaned.trim() === '' ? 'h-2' : ''}>{cleaned.replace(/\*/g, '')}</p>;
+                })}
+              </div>
+            </div>
+            <div className="mt-6 pt-4 border-t border-blue-200 flex justify-between items-center italic text-[10px] text-gray-400">
+              <span>* AI generated insights based on all available records.</span>
+              <span className="uppercase font-bold tracking-widest text-blue-300">EduVault Intelligence</span>
+            </div>
+          </div>
+        )}
 
         <Section title="Academic Records (Semester-wise)" onAdd={() => setModal("exams")}>
           {semesters.length === 0 && <p className="text-gray-400 text-sm py-2">No academic records found.</p>}
