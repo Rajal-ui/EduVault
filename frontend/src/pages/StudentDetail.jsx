@@ -269,7 +269,7 @@ function AddExamModal({ studentId, onClose }) {
   async function submit(e) {
     e.preventDefault(); setSaving(true); setError("");
     try {
-      await api.post(`/exams`, { StudentID: studentId, ...form, GPA: parseFloat(form.GPA) });
+      await api.post(`/students/exams`, { StudentID: studentId, ...form, GPA: parseFloat(form.GPA) });
       onClose();
     } catch (err) { setError(err.response?.data?.detail || "Failed"); }
     finally { setSaving(false); }
@@ -314,7 +314,7 @@ function AddMiscModal({ studentId, onClose }) {
   async function submit(e) {
     e.preventDefault(); setSaving(true); setError("");
     try {
-      await api.post(`/misc`, {
+      await api.post(`/students/misc`, {
         StudentID: studentId, ...form,
         RecordedBy: adminId,
         RecordedOn: new Date().toISOString()
