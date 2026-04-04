@@ -17,6 +17,7 @@ export default function StudentDetail() {
   // States for Editing Profile
   const [form, setForm] = useState(null);
   const [error, setError] = useState("");
+  const [isScanning, setIsScanning] = useState(false);
   const [saving, setSaving] = useState(false);
 
   function fetchAll() {
@@ -30,6 +31,46 @@ export default function StudentDetail() {
       setStudent(s.data); setMarks(m.data);
       setFees(f.data); setExams(e.data); setMisc(mi.data);
     });
+  }
+
+  async function handleAIScan(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("file", file);
+    setIsScanning(true);
+    try {
+      const res = await api.post("/ai/parse-receipt", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      setEditData(res.data);
+      setModal("aiVerify");
+    } catch (err) {
+      alert("AI Scan failed: " + (err.response?.data?.detail || err.message));
+    } finally {
+      setIsScanning(false);
+      e.target.value = "";
+    }
+  }
+
+  async function handleAIMarksheetScan(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("file", file);
+    setIsScanning(true);
+    try {
+      const res = await api.post("/ai/parse-marksheet", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      setEditData(res.data);
+      setModal("aiVerifyMarks");
+    } catch (err) {
+      alert("Marksheet Scan failed: " + (err.response?.data?.detail || err.message));
+    } finally {
+      setIsScanning(false);
+      e.target.value = "";
+    }
   }
 
   useEffect(() => { fetchAll(); }, [id]);
@@ -71,7 +112,10 @@ export default function StudentDetail() {
   }
 
   // Grouping marks by semester
-  const semesters = [...new Set([...marks.map(m => m.Semester), ...exams.map(e => e.Semester)])].sort();
+  const semesters = [...new Set([
+    ...(marks?.map(m => m.Semester) || []),
+    ...(exams?.map(e => e.Semester) || [])
+  ])].sort();
 
 
   return (
@@ -125,6 +169,10 @@ export default function StudentDetail() {
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="font-bold text-blue-800">{sem}</h3>
                     <div className="flex gap-2">
+                       <label className="text-[10px] bg-purple-100 text-purple-700 px-2 py-1 rounded font-bold uppercase tracking-wider cursor-pointer hover:bg-purple-200">
+                         {isScanning ? "..." : "✨ Scan Marksheet"}
+                         <input type="file" accept="image/*" className="hidden" onChange={handleAIMarksheetScan} disabled={isScanning} />
+                       </label>
                        <button onClick={() => setModal("marks")} className="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold uppercase tracking-wider">+ Add Subject</button>
                        {semExam && (
                          <>
@@ -188,7 +236,16 @@ export default function StudentDetail() {
         </Section>
 
 
-        <Section title="Fee Receipts" onAdd={() => setModal("fees")}>
+        <Section 
+          title="Fee Receipts" 
+          onAdd={() => setModal("fees")}
+          extraAction={
+            <label className="text-[10px] bg-purple-100 text-purple-700 px-2 py-1 rounded font-bold uppercase tracking-wider cursor-pointer hover:bg-purple-200">
+              {isScanning ? "Scanning..." : "✨ Scan with AI"}
+              <input type="file" accept="image/*" className="hidden" onChange={handleAIScan} disabled={isScanning} />
+            </label>
+          }
+        >
           <table className="w-full text-sm">
             <thead className="text-gray-500 text-xs uppercase border-b">
               <tr><th className="pb-2 text-left">Receipt ID</th><th className="pb-2 text-left">Type</th><th className="pb-2 text-left">Amount</th><th className="pb-2 text-left">Paid On</th><th className="pb-2 text-left">Status</th><th className="pb-2 text-right">Actions</th></tr>
@@ -234,10 +291,26 @@ export default function StudentDetail() {
       </main>
 
       {/* Edit Modals */}
+      {modal === "aiVerify" && (
+        <Modal title="Verify AI Extracted Data" onClose={() => setModal(null)}>
+          <AIReceiptModal studentId={id} data={editData} onClose={() => { setModal(null); fetchAll(); }} />
+        </Modal>
+      )}
+      {modal === "aiVerifyMarks" && (
+        <Modal title="Verify Extracted Marksheet" onClose={() => setModal(null)}>
+          <AIMarksheetVerifyModal studentId={id} data={editData} onClose={() => { setModal(null); fetchAll(); }} />
+        </Modal>
+      )}
       {modal === "editMark" && <EditMarkModal studentId={id} data={editData} onClose={() => { setModal(null); fetchAll(); }} />}
       {modal === "editExam" && <EditExamModal data={editData} onClose={() => { setModal(null); fetchAll(); }} />}
       {modal === "editFee"  && <EditFeeModal  data={editData} onClose={() => { setModal(null); fetchAll(); }} />}
       {modal === "editMisc" && <EditMiscModal data={editData} onClose={() => { setModal(null); fetchAll(); }} />}
+      
+      {modal === "editProfile" && (
+        <Modal title="Edit Student Profile" onClose={() => setModal(null)}>
+          <StudentForm form={form} onChange={handleChange} onSubmit={handleEdit} saving={saving} error={error} isEdit />
+        </Modal>
+      )}
       
       {/* Add Modals */}
       {modal === "marks"  && <AddMarkModal    studentId={id} onClose={() => { setModal(null); fetchAll(); }} />}
@@ -249,14 +322,60 @@ export default function StudentDetail() {
 }
 
 
-function Section({ title, onAdd, children }) {
+function Section({ title, onAdd, extraAction, children }) {
   return (
     <div className="bg-white rounded-xl shadow p-5">
       <div className="flex justify-between items-center mb-3">
         <h2 className="font-semibold text-gray-700">{title}</h2>
-        <button onClick={onAdd} className="text-xs bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700">+ Add</button>
+        <div className="flex gap-2 items-center">
+           {extraAction}
+           <button onClick={onAdd} className="text-xs bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700">+ Add</button>
+        </div>
       </div>
       {children}
+    </div>
+  );
+}
+
+function AIReceiptModal({ studentId, data, onClose }) {
+  const { form, onChange, error, setError, saving, setSaving } = useForm({
+    ReceiptID: data?.ReceiptID || "",
+    FeeType: data?.FeeType || "",
+    Amount: data?.Amount || "",
+    PaidOn: data?.PaidOn || "",
+    TransactionDetails: data?.TransactionDetails || "",
+    Status: data?.Status || "Paid"
+  });
+
+  async function submit(e) {
+    e.preventDefault(); setSaving(true); setError("");
+    try {
+      await api.post(`/students/${studentId}/fees`, form);
+      onClose();
+    } catch (err) { setError(err.response?.data?.detail || "Failed to add scanned receipt"); }
+    finally { setSaving(false); }
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs italic text-purple-600 font-medium">✨ AI automatically extracted these details. Please verify and confirm.</p>
+      <form onSubmit={submit} className="space-y-3">
+        {[["ReceiptID","Receipt ID","text"],["FeeType","Fee Type","text"],["Amount","Amount (₹)","number"],["PaidOn","Paid On","date"],["TransactionDetails","Transaction Details","text"]].map(([name, label, type]) => (
+          <div key={name}>
+            <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+            <input type={type} name={name} value={form[name] || ""} onChange={onChange}
+              required={name !== "TransactionDetails"}
+              className="w-full border border-purple-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
+          </div>
+        ))}
+        {error && <p className="text-red-500 text-sm">{error}</p>}
+        <div className="flex justify-between pt-1">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-gray-500 hover:underline">Cancel</button>
+          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50">
+            {saving ? "Confirming..." : "Confirm & Save"}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
@@ -281,6 +400,88 @@ function useForm(initial) {
   const [saving, setSaving] = useState(false);
   const onChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
   return { form, onChange, error, setError, saving, setSaving };
+}
+
+function AIMarksheetVerifyModal({ studentId, data, onClose }) {
+  const [semester, setSemester] = useState(data?.Semester || "Semester 1");
+  const [subjects, setSubjects] = useState(data?.Subjects || []);
+  const [overall, setOverall] = useState(data?.Overall || { GPA: "", ResultStatus: "Pass", DateReleased: new Date().toISOString().split('T')[0] });
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function handleSave() {
+    setSaving(true); setError("");
+    try {
+      const payload = {
+        marks: subjects.map(s => ({ ...s, Semester: semester })),
+        overall_result: overall.GPA ? { ...overall, Semester: semester, StudentID: studentId } : null
+      };
+      await api.post(`/students/${studentId}/marks/bulk`, payload);
+      onClose();
+    } catch (err) {
+      setError(err.response?.data?.detail || "Failed to save results");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const updateSubject = (idx, field, val) => {
+    const next = [...subjects];
+    next[idx][field] = field === "Marks" ? parseInt(val) : val;
+    setSubjects(next);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-purple-50 p-3 rounded-lg border border-purple-100">
+        <label className="block text-xs font-bold text-purple-700 uppercase mb-1">Target Semester</label>
+        <input value={semester} onChange={e => setSemester(e.target.value)} className="w-full bg-white border border-purple-200 px-3 py-1.5 rounded-md text-sm focus:ring-2 focus:ring-purple-500" />
+      </div>
+
+      <div className="max-h-60 overflow-y-auto border rounded-xl">
+        <table className="w-full text-xs">
+          <thead className="bg-gray-50 text-gray-500 uppercase sticky top-0">
+            <tr><th className="px-3 py-2 text-left">Subject</th><th className="px-3 py-2 text-left w-16">Marks</th><th className="px-3 py-2 text-left w-16">Grade</th></tr>
+          </thead>
+          <tbody className="divide-y">
+            {subjects.map((s, idx) => (
+              <tr key={idx}>
+                <td className="px-3 py-1"><input value={s.Subject} onChange={e => updateSubject(idx, "Subject", e.target.value)} className="w-full border-none focus:ring-0 p-0 h-7" /></td>
+                <td className="px-3 py-1"><input value={s.Marks} type="number" onChange={e => updateSubject(idx, "Marks", e.target.value)} className="w-full border-none focus:ring-0 p-0 h-7" /></td>
+                <td className="px-3 py-1"><input value={s.Grade} onChange={e => updateSubject(idx, "Grade", e.target.value)} className="w-full border-none focus:ring-0 p-0 h-7" /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3 border p-3 rounded-xl bg-gray-50">
+        <div>
+          <label className="block text-[10px] font-bold text-gray-500 uppercase">GPA</label>
+          <input type="number" step="0.01" value={overall.GPA} onChange={e => setOverall({...overall, GPA: e.target.value})} className="w-full bg-white border rounded p-1 text-xs" />
+        </div>
+        <div>
+          <label className="block text-[10px] font-bold text-gray-500 uppercase">Status</label>
+          <select value={overall.ResultStatus} onChange={e => setOverall({...overall, ResultStatus: e.target.value})} className="w-full bg-white border rounded p-1 text-xs">
+            {["Pass","Fail","ATKT","Distinction"].map(v => <option key={v}>{v}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-[10px] font-bold text-gray-500 uppercase">Date</label>
+          <input type="date" value={overall.DateReleased} onChange={e => setOverall({...overall, DateReleased: e.target.value})} className="w-full bg-white border rounded p-1 text-xs" />
+        </div>
+      </div>
+      
+      {error && <p className="text-red-500 text-xs">{error}</p>}
+
+      <div className="flex justify-between pt-2">
+        <button onClick={onClose} className="text-gray-500 text-sm hover:underline">Cancel</button>
+        <button onClick={handleSave} disabled={saving} className="bg-purple-600 text-white px-6 py-2 rounded-lg font-bold text-sm hover:bg-purple-700 disabled:opacity-50">
+          {saving ? "Saving..." : "Confirm & Save Results"}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function AddMarkModal({ studentId, onClose }) {

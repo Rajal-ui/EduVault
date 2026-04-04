@@ -153,4 +153,13 @@ class MiscRecordUpdate(BaseModel):
     RecordType: Optional[str] = None
     Details: Optional[str] = None
     RecordedBy: Optional[str] = None
-    RecordedOn: Optional[datetime] = None
+
+# --- AI Extraction & Bulk Schemas ---
+class MarksheetBulkCreate(BaseModel):
+    marks: List[MarksheetCreate]
+    overall_result: Optional[ExamStatusCreate] = None
+
+class AIResultsExtraction(BaseModel):
+    Semester: str
+    Subjects: List[MarksheetCreate]
+    Overall: Optional[dict] = None  # GPA, ResultStatus, DateReleased

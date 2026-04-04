@@ -8,6 +8,8 @@ python-multipart
 pydantic
 pydantic-settings
 python-dotenv
+importlib-metadata
 reportlab
 pytest
 httpx
+google-generativeai

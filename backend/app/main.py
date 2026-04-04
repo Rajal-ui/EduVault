@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import auth, students
+from app.routes import auth, students, ai
 
 app = FastAPI(
     title="EduVault API",
@@ -18,6 +18,7 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(students.router)
+app.include_router(ai.router)
 
 @app.get("/")
 def root():

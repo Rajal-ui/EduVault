@@ -17,12 +17,32 @@ export default function AdminDashboard() {
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [aiQuery, setAiQuery] = useState("");
+  const [isAiLoading, setIsAiLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const name = localStorage.getItem("name");
   const navigate = useNavigate();
 
   function fetchStudents() {
+    setLoading(true);
     api.get("/students/").then((res) => setStudents(res.data)).finally(() => setLoading(false));
+  }
+
+  async function handleAISearch(e) {
+    if (e) e.preventDefault();
+    if (!aiQuery.trim()) {
+      fetchStudents();
+      return;
+    }
+    setIsAiLoading(true);
+    try {
+      const res = await api.get(`/ai/search?query=${encodeURIComponent(aiQuery)}`);
+      setStudents(res.data);
+    } catch (err) {
+      alert("AI Search failed: " + (err.response?.data?.detail || err.message));
+    } finally {
+      setIsAiLoading(false);
+    }
   }
 
   useEffect(() => { fetchStudents(); }, []);
@@ -121,6 +141,27 @@ export default function AdminDashboard() {
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-gray-800">All Students</h2>
           <div className="flex gap-2">
+            {/* AI Search Bar */}
+            <form onSubmit={handleAISearch} className="flex gap-2 mr-4">
+               <div className="relative">
+                 <input 
+                   type="text" 
+                   placeholder="✨ Ask AI (e.g. 'IT students with pending fees')..." 
+                   className="w-80 border border-purple-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 pl-10"
+                   value={aiQuery}
+                   onChange={(e) => setAiQuery(e.target.value)}
+                 />
+                 <span className="absolute left-3 top-2.5 text-purple-400">🔍</span>
+               </div>
+               <button 
+                 type="submit" 
+                 disabled={isAiLoading}
+                 className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50"
+               >
+                 {isAiLoading ? "Thinking..." : "Ask AI"}
+               </button>
+            </form>
+
             <button onClick={handleExport} className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700">
               Export CSV
             </button>
