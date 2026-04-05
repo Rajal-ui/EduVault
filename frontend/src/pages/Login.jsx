@@ -24,6 +24,7 @@ export default function Login() {
       localStorage.setItem("refresh_token", res.data.refresh_token);
       localStorage.setItem("role", res.data.role);
       localStorage.setItem("name", res.data.name);
+      if (res.data.user_id) localStorage.setItem("user_id", res.data.user_id);
       
       const userRole = res.data.role;
       if (userRole === "admin") navigate("/admin");

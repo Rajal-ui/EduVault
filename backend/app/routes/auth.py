@@ -27,7 +27,8 @@ def login(request: Request, login_data: LoginRequest, db: Session = Depends(get_
             access_token=create_access_token(data), 
             refresh_token=create_refresh_token(data),
             role="admin", 
-            name=str(user.Name)
+            name=str(user.Name),
+            user_id=user.AdminID,
         )
 
     elif login_data.role == "student":
@@ -40,7 +41,8 @@ def login(request: Request, login_data: LoginRequest, db: Session = Depends(get_
             access_token=create_access_token(data), 
             refresh_token=create_refresh_token(data),
             role="student", 
-            name=str(user.Name)
+            name=str(user.Name),
+            user_id=user.StudentID,
         )
 
     elif login_data.role in ["faculty", "hod"]:
@@ -54,7 +56,8 @@ def login(request: Request, login_data: LoginRequest, db: Session = Depends(get_
             access_token=create_access_token(data), 
             refresh_token=create_refresh_token(data),
             role=db_role, 
-            name=str(user.Name)
+            name=str(user.Name),
+            user_id=user.FacultyID,
         )
     
     raise HTTPException(status_code=400, detail="Invalid role")

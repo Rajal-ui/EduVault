@@ -15,6 +15,7 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     role: str
     name: str
+    user_id: str
 
 
 class StudentCreate(BaseModel):
@@ -58,6 +59,57 @@ class StudentOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class AdminOut(BaseModel):
+    AdminID: str
+    Name: str
+    Department: Optional[str] = None
+    Contact: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class AdminCreate(BaseModel):
+    AdminID: str
+    Name: str
+    Department: Optional[str] = None
+    Contact: Optional[str] = None
+    Password: str
+
+
+class AdminUpdate(BaseModel):
+    Name: Optional[str] = None
+    Department: Optional[str] = None
+    Contact: Optional[str] = None
+
+
+class FacultyOut(BaseModel):
+    FacultyID: str
+    Name: str
+    Department: str
+    Role: str
+    Contact: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class FacultyCreate(BaseModel):
+    FacultyID: str
+    Name: str
+    Department: str
+    Role: str = "faculty"
+    Contact: Optional[str] = None
+    Password: str
+
+
+class FacultyUpdate(BaseModel):
+    Name: Optional[str] = None
+    Department: Optional[str] = None
+    Role: Optional[str] = None
+    Contact: Optional[str] = None
 
 
 class MarksheetCreate(BaseModel):

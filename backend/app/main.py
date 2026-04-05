@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from app.core.rate_limit import limiter
-from app.routes import auth, students, ai, analytics, audit, notifications
+from app.routes import auth, students, ai, analytics, audit, notifications, management
 
 app = FastAPI(
     title="EduVault API",
@@ -28,6 +28,7 @@ app.include_router(ai.router)
 app.include_router(analytics.router)
 app.include_router(audit.router)
 app.include_router(notifications.router)
+app.include_router(management.router)
 
 @app.get("/")
 def root():

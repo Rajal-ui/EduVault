@@ -86,16 +86,16 @@ CREATE TABLE MiscellaneousRecords (
 
 INSERT INTO Admins (AdminID, Name, Department, Contact, Password) VALUES
 ('ADM001', 'Mrs. Sakshi Patil', 'Head Office', 'sakshi.patil@college.edu',
- '$2b$12$KIXCqfTa0z5R8e/WnIQBpOgMzDhT9N0V6kL3YfJpX1sWqRnMvOuCi');
+ '$2b$12$lf1I4fczcsnlpZkIDzA6gOBaU/fGHfb419NaSC4U9.Q3Bu8TLS/te');
 
 INSERT INTO Students (StudentID, Name, Department, Year, Contact, AcademicRecord, FeeStatus, Password, DateOfBirth, Address, ParentContact) VALUES
 ('STU001', 'Rajal Mistry', 'Computer Science', 2, 'rajal@email.com',
  'Excellent academic performance, no disciplinary issues.', 'Paid',
- '$2b$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+ '$2b$12$Wf.LEY1x5SGlMl2sfky4T.wXxJInknTDSxI.//7mzrwA5prFUqMFe',
  '2004-05-15', '123 Main St, Anytown', '555-1234'),
 ('STU002', 'Kaavya Sarin', 'Electronics Engineering', 3, 'kaavya@email.com',
  'Good standing, participated in tech fests.', 'Pending',
- '$2b$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+ '$2b$12$JSDXZS.QOyEapnadmkQUUuQdNwMNFLHJHATYfo0Zz/Tqc21RWEtL.',
  '2003-11-20', '456 Oak Ave, Othercity', '555-5678');
 
 INSERT INTO Marksheets (StudentID, Subject, Marks, Grade) VALUES

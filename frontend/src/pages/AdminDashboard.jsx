@@ -4,7 +4,9 @@ import api from "../api/axios";
 import AnalyticsPanel from "../components/AnalyticsPanel";
 import ActivityFeed from "../components/ActivityFeed";
 import NotificationBell from "../components/NotificationBell";
-import { LayoutDashboard, Users as UsersIcon, Activity } from "lucide-react";
+import ResetPasswordModal from "../components/ResetPasswordModal";
+import StaffAccountsPanel from "../components/StaffAccountsPanel";
+import { LayoutDashboard, Users as UsersIcon, Activity, Shield } from "lucide-react";
 
 const emptyForm = {
   StudentID: "", Name: "", Department: "", Year: "",
@@ -19,6 +21,7 @@ export default function AdminDashboard() {
   const [showEdit, setShowEdit] = useState(false);
   const [showDelete, setShowDelete] = useState(null);
   const [showReset, setShowReset] = useState(null);
+  const [showGlobalReset, setShowGlobalReset] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -146,6 +149,12 @@ export default function AdminDashboard() {
               <UsersIcon size={16} /> Students
             </button>
             <button 
+              onClick={() => setActiveTab("staff")}
+              className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-bold transition-all ${activeTab === 'staff' ? 'bg-white text-blue-700 shadow' : 'text-blue-100 hover:bg-blue-700'}`}
+            >
+              <Shield size={16} /> Staff
+            </button>
+            <button 
               onClick={() => setActiveTab("analytics")}
               className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-bold transition-all ${activeTab === 'analytics' ? 'bg-white text-blue-700 shadow' : 'text-blue-100 hover:bg-blue-700'}`}
             >
@@ -171,11 +180,13 @@ export default function AdminDashboard() {
           <AnalyticsPanel />
         ) : activeTab === "activity" ? (
           <div className="max-w-4xl mx-auto"><ActivityFeed /></div>
+        ) : activeTab === "staff" ? (
+          <StaffAccountsPanel />
         ) : (
           <>
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
               <h2 className="text-2xl font-black text-gray-800 uppercase tracking-tight">Student Records</h2>
-              <div className="flex gap-3">
+              <div className="flex gap-3 flex-wrap items-center">
                 {/* AI Search Bar */}
                 <form onSubmit={handleAISearch} className="flex gap-2 mr-4">
                    <div className="relative">
@@ -208,6 +219,13 @@ export default function AdminDashboard() {
                 </label>
                 <button onClick={openAdd} className="bg-blue-600 text-white px-6 py-2.5 rounded-xl text-sm font-black uppercase tracking-wider hover:bg-blue-700 shadow-lg transition-transform active:scale-95">
                   + Add New
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowGlobalReset(true)}
+                  className="bg-amber-50 text-amber-900 border border-amber-200 px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-amber-100 shadow-sm"
+                >
+                  Reset any account
                 </button>
               </div>
             </div>
@@ -280,8 +298,23 @@ export default function AdminDashboard() {
 
       
       {showReset && (
-        <Modal title="Reset Student Password" onClose={() => setShowReset(null)}>
-          <ResetPasswordModal user={showReset} onClose={() => setShowReset(null)} />
+        <Modal title="Reset student password" onClose={() => setShowReset(null)}>
+          <ResetPasswordModal
+            lockUserFields
+            userId={showReset.StudentID}
+            role="student"
+            displayLabel={`${showReset.Name} (${showReset.StudentID})`}
+            onClose={() => setShowReset(null)}
+          />
+        </Modal>
+      )}
+
+      {showGlobalReset && (
+        <Modal title="Reset password (admin, faculty, or student)" onClose={() => setShowGlobalReset(false)}>
+          <p className="text-sm text-gray-600 mb-4">
+            Enter the account ID shown on the login screen. For HOD accounts, choose &quot;Head of Department (HOD)&quot;.
+          </p>
+          <ResetPasswordModal onClose={() => setShowGlobalReset(false)} />
         </Modal>
       )}
 
