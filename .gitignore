@@ -4,6 +4,9 @@
 .env.local
 .env.production
 
+# Local-only: password reset CLI (never commit — use reset_passwords.example.py as template)
+backend/scripts/reset_passwords.py
+
 # ── Python ────────────────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]

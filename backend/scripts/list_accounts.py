@@ -2,9 +2,12 @@
 List all EduVault accounts (counts + IDs + names). Passwords are NOT shown.
 
 Passwords are stored as bcrypt hashes — the real password cannot be read from the DB.
-To set passwords from the shell, run from backend/:
+CLI reset script is not tracked in git. Copy the template once:
+  cp scripts/reset_passwords.example.py scripts/reset_passwords.py
+Then from backend/:
   python scripts/reset_passwords.py --role student --id STU001
   python scripts/reset_passwords.py --all
+Or use Admin → Staff → Reset Pwd / Reset any account.
 
 Usage:
   python scripts/list_accounts.py
@@ -46,7 +49,7 @@ try:
     print("  Login checklist if you get 401:")
     print("    • Role tab must match the account (admin / student / faculty).")
     print("    • User ID must match exactly (e.g. ADM001, STU005, FAC001).")
-    print("    • If you forgot the password, run:  python scripts/reset_passwords.py")
+    print("    • Forgot password: Admin UI reset, or local scripts/reset_passwords.py (from .example.py).")
     print("    • Or log in as admin and use Admin → Reset any account.")
     print("-" * 60 + "\n")
 finally:
