@@ -11,6 +11,7 @@ class LoginRequest(BaseModel):
 
 class TokenResponse(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
     role: str
     name: str
@@ -165,3 +166,31 @@ class AIResultsExtraction(BaseModel):
     Semester: str
     Subjects: List[MarksheetCreate]
     Overall: Optional[dict] = None  # GPA, ResultStatus, DateReleased
+
+# --- Analytics Schemas ---
+class DeptCount(BaseModel):
+    name: str
+    count: int
+
+class FeeStatusCount(BaseModel):
+    name: str
+    count: int
+
+class PerformanceStat(BaseModel):
+    label: str
+    avg_gpa: Decimal
+
+class AnalyticsSummary(BaseModel):
+    total_students: int
+    dept_counts: List[DeptCount]
+    fee_summary: List[FeeStatusCount]
+    performance_by_dept: List[PerformanceStat]
+    performance_by_year: List[PerformanceStat]
+
+class AtRiskStudent(BaseModel):
+    StudentID: str
+    Name: str
+    RiskScore: float
+    RiskLevel: str  # High, Medium, Low
+    PrimaryReasons: List[str]
+    AISuggestion: Optional[str] = None

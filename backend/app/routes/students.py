@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Request
 from fastapi.responses import StreamingResponse
 import csv
 import io
@@ -18,6 +18,8 @@ from app.schemas.schemas import (
 )
 from app.core.dependencies import require_admin, require_student, get_current_user
 from app.core.security import hash_password
+from app.core.audit import log_action
+from app.core.notifications import create_user_notification
 
 router = APIRouter(prefix="/students", tags=["Students"])
 
@@ -35,7 +37,7 @@ def get_student(student_id: str, db: Session = Depends(get_db), current_user: di
     return student
 
 @router.post("/", response_model=StudentOut, status_code=201)
-def create_student(data: StudentCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
+def create_student(request: Request, data: StudentCreate, db: Session = Depends(get_db), admin_user=Depends(require_admin)):
     existing = db.query(Student).filter(Student.StudentID == data.StudentID).first()
     if existing:
         raise HTTPException(status_code=400, detail="Student ID already exists")
@@ -43,26 +45,67 @@ def create_student(data: StudentCreate, db: Session = Depends(get_db), _=Depends
     student_data["Password"] = hash_password(data.Password)
     student = Student(**student_data)
     db.add(student)
+    
+    # Audit log
+    log_action(
+        db, 
+        user_id=admin_user["sub"], 
+        role=admin_user["role"], 
+        action="CREATE", 
+        table="Students", 
+        record_id=student.StudentID, 
+        new_val=data.model_dump(exclude={"Password"}),
+        ip=request.client.host
+    )
+    
     db.commit()
     db.refresh(student)
     return student
 
 @router.put("/{student_id}", response_model=StudentOut)
-def update_student(student_id: str, data: StudentUpdate, db: Session = Depends(get_db), _=Depends(require_admin)):
+def update_student(request: Request, student_id: str, data: StudentUpdate, db: Session = Depends(get_db), admin_user=Depends(require_admin)):
     student = db.query(Student).filter(Student.StudentID == student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
+    
+    old_values = {field: getattr(student, field) for field in data.model_dump(exclude_unset=True).keys()}
+    
     for field, value in data.model_dump(exclude_none=True).items():
         setattr(student, field, value)
+        
+    log_action(
+        db, 
+        user_id=admin_user["sub"], 
+        role=admin_user["role"], 
+        action="UPDATE", 
+        table="Students", 
+        record_id=student_id, 
+        old_val=old_values, 
+        new_val=data.model_dump(exclude_none=True),
+        ip=request.client.host
+    )
+    
     db.commit()
     db.refresh(student)
     return student
 
 @router.delete("/{student_id}", status_code=204)
-def delete_student(student_id: str, db: Session = Depends(get_db), _=Depends(require_admin)):
+def delete_student(request: Request, student_id: str, db: Session = Depends(get_db), admin_user=Depends(require_admin)):
     student = db.query(Student).filter(Student.StudentID == student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
+        
+    log_action(
+        db, 
+        user_id=admin_user["sub"], 
+        role=admin_user["role"], 
+        action="DELETE", 
+        table="Students", 
+        record_id=student_id, 
+        old_val={"Name": student.Name, "Department": student.Department}, 
+        ip=request.client.host
+    )
+    
     db.delete(student)
     db.commit()
 
@@ -73,17 +116,37 @@ def get_marks(student_id: str, db: Session = Depends(get_db), current_user: dict
     return db.query(Marksheet).filter(Marksheet.StudentID == student_id).all()
 
 @router.post("/{student_id}/marks", response_model=MarksheetOut, status_code=201)
-def add_mark(student_id: str, data: MarksheetCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
+async def add_mark(request: Request, student_id: str, data: MarksheetCreate, db: Session = Depends(get_db), admin_user=Depends(require_admin)):
     mark = Marksheet(StudentID=student_id, **data.model_dump())
     db.add(mark)
-    db.flush() # Flush to get it in the DB session for sync
+    
+    log_action(
+        db, 
+        user_id=admin_user["sub"], 
+        role=admin_user["role"], 
+        action="CREATE", 
+        table="Marksheets", 
+        record_id=f"{student_id}:{data.Subject}", 
+        new_val=data.model_dump(),
+        ip=request.client.host
+    )
+    
+    await create_user_notification(
+        db, 
+        user_id=student_id, 
+        title="New Grade Added", 
+        message=f"A new grade for {data.Subject} ({data.Grade}) has been added to your profile.",
+        type="grade_release"
+    )
+    
+    db.flush() 
     sync_student_semester_gpa(db, student_id, data.Semester)
     db.commit()
     db.refresh(mark)
     return mark
 
 @router.post("/{student_id}/marks/bulk", status_code=201)
-def bulk_add_marks(student_id: str, data: MarksheetBulkCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
+async def bulk_add_marks(student_id: str, data: MarksheetBulkCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
     # 1. Process individual marks with deduplication for the session
     processed_keys = set()
     for m_data in data.marks:
@@ -114,6 +177,15 @@ def bulk_add_marks(student_id: str, data: MarksheetBulkCreate, db: Session = Dep
     for sem in semesters_to_sync:
         sync_student_semester_gpa(db, student_id, sem)
             
+    # 3. Notify student
+    await create_user_notification(
+        db, 
+        user_id=student_id, 
+        title="Term Results Updated", 
+        message=f"Results for {len(semesters_to_sync)} semester(s) have been updated.",
+        type="grade_release"
+    )
+
     try:
         db.commit()
     except Exception as e:
@@ -144,6 +216,32 @@ def delete_mark(student_id: str, semester: str, subject: str, db: Session = Depe
     sync_student_semester_gpa(db, student_id, semester)
     db.commit()
 
+@router.delete("/{student_id}/semesters/{semester}", status_code=204)
+def delete_semester(student_id: str, semester: str, db: Session = Depends(get_db), _=Depends(require_admin)):
+    """Delete ALL marks for a semester and its associated exam status record."""
+    marks = db.query(Marksheet).filter(Marksheet.StudentID == student_id, Marksheet.Semester == semester).all()
+    for mark in marks:
+        db.delete(mark)
+    exam = db.query(ExamStatus).filter(ExamStatus.StudentID == student_id, ExamStatus.Semester == semester).first()
+    if exam:
+        db.delete(exam)
+    db.commit()
+
+@router.put("/{student_id}/semesters/{semester}/rename", status_code=200)
+def rename_semester(student_id: str, semester: str, db: Session = Depends(get_db), _=Depends(require_admin), new_name: str = ""):
+    """Rename a semester across all marks and exam status."""
+    if not new_name:
+        raise HTTPException(status_code=400, detail="new_name query param is required")
+    marks = db.query(Marksheet).filter(Marksheet.StudentID == student_id, Marksheet.Semester == semester).all()
+    for mark in marks:
+        mark.Semester = new_name
+    exam = db.query(ExamStatus).filter(ExamStatus.StudentID == student_id, ExamStatus.Semester == semester).first()
+    if exam:
+        exam.Semester = new_name
+    db.commit()
+    return {"message": f"Semester renamed from '{semester}' to '{new_name}'"}
+
+
 @router.get("/{student_id}/fees", response_model=List[FeeReceiptOut])
 def get_fees(student_id: str, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
     if current_user["role"] == "student" and current_user["sub"] != student_id:
@@ -151,9 +249,18 @@ def get_fees(student_id: str, db: Session = Depends(get_db), current_user: dict 
     return db.query(FeeReceipt).filter(FeeReceipt.StudentID == student_id).all()
 
 @router.post("/{student_id}/fees", response_model=FeeReceiptOut, status_code=201)
-def add_fee(student_id: str, data: FeeReceiptCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
+async def add_fee(student_id: str, data: FeeReceiptCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
     receipt = FeeReceipt(StudentID=student_id, **data.model_dump())
     db.add(receipt)
+    
+    await create_user_notification(
+        db, 
+        user_id=student_id, 
+        title="Payment Recorded", 
+        message=f"Your payment of {data.Amount} for {data.FeeType} has been received.",
+        type="fee_deadline"
+    )
+    
     db.commit()
     db.refresh(receipt)
     return receipt
@@ -217,9 +324,20 @@ def get_misc(student_id: str, db: Session = Depends(get_db), current_user: dict 
     return db.query(MiscellaneousRecord).filter(MiscellaneousRecord.StudentID == student_id).all()
 
 @router.post("/misc", response_model=MiscRecordOut, status_code=201)
-def add_misc(data: MiscRecordCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
+async def add_misc(data: MiscRecordCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
     record = MiscellaneousRecord(**data.model_dump())
     db.add(record)
+    
+    # Notify student about warning or general info
+    notif_type = "warning" if data.RecordType == "Warning" else "system"
+    await create_user_notification(
+        db, 
+        user_id=data.StudentID, 
+        title=f"Notification: {data.RecordType}", 
+        message=data.Details if len(data.Details) < 100 else f"New {data.RecordType} record added.",
+        type=notif_type
+    )
+    
     db.commit()
     db.refresh(record)
     return record

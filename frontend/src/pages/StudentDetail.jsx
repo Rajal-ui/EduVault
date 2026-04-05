@@ -278,77 +278,135 @@ export default function StudentDetail() {
           </div>
         )}
 
-        <Section title="Academic Records (Semester-wise)" onAdd={() => setModal("exams")}>
-          {semesters.length === 0 && <p className="text-gray-400 text-sm py-2">No academic records found.</p>}
+        {/* ─── Academic Records ─── */}
+        <div className="bg-white rounded-xl shadow p-5">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="font-semibold text-gray-700">Academic Records (Semester-wise)</h2>
+            <div className="flex gap-2">
+              <label className="text-[10px] bg-purple-100 text-purple-700 px-2 py-1 rounded font-bold uppercase tracking-wider cursor-pointer hover:bg-purple-200 flex items-center gap-1">
+                {isScanning ? "Scanning..." : "✨ Scan Marksheet"}
+                <input type="file" accept="image/*" className="hidden" onChange={handleAIMarksheetScan} disabled={isScanning} />
+              </label>
+              <button
+                onClick={() => setModal("addNewSemesterSubject")}
+                className="text-[10px] bg-blue-600 text-white px-3 py-1 rounded font-bold uppercase tracking-wider hover:bg-blue-700"
+              >+ Add Subject</button>
+            </div>
+          </div>
+
+          {semesters.length === 0 && (
+            <div className="text-center py-10 border-2 border-dashed border-gray-200 rounded-xl">
+              <p className="text-gray-400 text-sm mb-2">No academic records yet.</p>
+              <p className="text-xs text-gray-400">Click <strong>+ Add Subject</strong> above to start adding subject marks for a semester.</p>
+            </div>
+          )}
+
           <div className="space-y-6">
             {semesters.map(sem => {
               const semMarks = marks.filter(m => m.Semester === sem);
-              const semExam = exams.find(e => e.Semester === sem);
-              
+              const semExam  = exams.find(e => e.Semester === sem);
+
               return (
-                <div key={sem} className="border rounded-xl p-4 bg-gray-50/50">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-bold text-blue-800">{sem}</h3>
-                    <div className="flex gap-2">
-                       <label className="text-[10px] bg-purple-100 text-purple-700 px-2 py-1 rounded font-bold uppercase tracking-wider cursor-pointer hover:bg-purple-200">
-                         {isScanning ? "..." : "✨ Scan Marksheet"}
-                         <input type="file" accept="image/*" className="hidden" onChange={handleAIMarksheetScan} disabled={isScanning} />
-                       </label>
-                       <button onClick={() => setModal("marks")} className="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold uppercase tracking-wider">+ Add Subject</button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="md:col-span-2">
-                      <table className="w-full text-sm bg-white rounded-lg shadow-sm overflow-hidden">
-                        <thead className="bg-gray-100 text-gray-500 text-[10px] uppercase">
-                          <tr><th className="px-3 py-2 text-left">Subject</th><th className="px-3 py-2 text-left">Marks</th><th className="px-3 py-2 text-left">Grade</th><th className="px-3 py-2 text-right">Actions</th></tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-50">
-                          {semMarks.map(m => (
-                            <tr key={m.Subject}>
-                              <td className="px-3 py-2">{m.Subject}</td>
-                              <td className="px-3 py-2 font-medium">{m.Marks}</td>
-                              <td className="px-3 py-2 font-bold text-blue-600">{m.Grade}</td>
-                              <td className="px-3 py-2 text-right flex justify-end gap-2">
-                                <button onClick={() => {setEditData(m); setModal("editMark")}} className="text-gray-400 hover:text-blue-600">✎</button>
-                                <button onClick={() => genericDelete(`/students/${id}/marks/${m.Semester}/${m.Subject}`, `Delete marks for ${m.Subject}?`)} className="text-gray-400 hover:text-red-600">✕</button>
-                              </td>
-                            </tr>
-                          ))}
-                          {semMarks.length === 0 && <tr><td colSpan={4} className="px-3 py-4 text-center text-gray-400 text-xs italic">No subject marks added yet</td></tr>}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    <div className="bg-white p-4 rounded-lg shadow-sm border border-blue-100 flex flex-col justify-center">
-                      <p className="text-[10px] uppercase text-gray-400 font-bold mb-2">Overall Result</p>
-                      {semExam ? (
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-end">
-                            <span className="text-xs text-gray-500">GPA</span>
-                            <span className="text-2xl font-black text-blue-700">{semExam.GPA}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-xs text-gray-500">Status</span>
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                              semExam.ResultStatus === "Distinction" ? "bg-purple-100 text-purple-700" :
-                              semExam.ResultStatus === "Pass" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                              {semExam.ResultStatus}
-                            </span>
-                          </div>
-                          <p className="text-[10px] text-gray-400 text-right mt-2 italic">Released: {semExam.DateReleased}</p>
-                        </div>
-                      ) : (
-                        <p className="text-xs text-gray-400 italic text-center py-4">Overall result not yet declared</p>
+                <div key={sem} className="border border-gray-200 rounded-xl overflow-hidden">
+                  {/* Semester Header */}
+                  <div className="flex justify-between items-center px-4 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
+                    <div className="flex items-center gap-3">
+                      <span className="font-bold text-blue-800 text-sm">{sem}</span>
+                      {semExam && (
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                          semExam.ResultStatus === "Distinction" ? "bg-purple-100 text-purple-700" :
+                          semExam.ResultStatus === "Pass" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                          {semExam.ResultStatus}
+                        </span>
+                      )}
+                      {semExam && (
+                        <span className="text-xs font-black text-blue-700 bg-blue-100 px-2 py-0.5 rounded">
+                          GPA {semExam.GPA}
+                        </span>
                       )}
                     </div>
+                    <div className="flex gap-2 items-center">
+                      <button
+                        onClick={() => { setEditData({ semester: sem }); setModal("addSubjectToSem"); }}
+                        className="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold hover:bg-blue-200"
+                      >+ Subject</button>
+                      <button
+                        onClick={() => { setEditData({ semester: sem }); setModal("renameSemester"); }}
+                        className="text-[10px] bg-gray-100 text-gray-600 px-2 py-1 rounded font-bold hover:bg-gray-200"
+                      >✎ Rename</button>
+                      <button
+                        onClick={async () => {
+                          if (!window.confirm(`Delete entire "${sem}" including all ${semMarks.length} subject(s) and exam result?`)) return;
+                          try { await api.delete(`/students/${id}/semesters/${encodeURIComponent(sem)}`); fetchAll(); }
+                          catch { alert("Failed to delete semester"); }
+                        }}
+                        className="text-[10px] bg-red-50 text-red-600 px-2 py-1 rounded font-bold hover:bg-red-100"
+                      >🗑 Delete Sem</button>
+                    </div>
                   </div>
+
+                  {/* Subjects Table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 text-gray-500 text-[10px] uppercase">
+                        <tr>
+                          <th className="px-4 py-2 text-left">Subject</th>
+                          <th className="px-4 py-2 text-left">Marks</th>
+                          <th className="px-4 py-2 text-left">Grade</th>
+                          <th className="px-4 py-2 text-left">Credits</th>
+                          <th className="px-4 py-2 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {semMarks.map(m => (
+                          <SemSubjectRow
+                            key={m.Subject}
+                            mark={m}
+                            studentId={id}
+                            onUpdated={fetchAll}
+                          />
+                        ))}
+                        {semMarks.length === 0 && (
+                          <tr>
+                            <td colSpan={5} className="px-4 py-4 text-center text-gray-400 text-xs italic">
+                              No subjects yet — click <strong>+ Subject</strong> above
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Exam / GPA footer */}
+                  {semExam && (
+                    <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex justify-between items-center text-xs text-gray-500">
+                      <span>Released: {semExam.DateReleased}</span>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => { setEditData(semExam); setModal("editExam"); }}
+                          className="text-[10px] bg-white border border-gray-200 text-gray-600 px-2 py-1 rounded hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
+                        >Edit Result</button>
+                        <button
+                          onClick={() => genericDelete(`/students/exams/${semExam.ExamRecordID}`, "Remove the overall GPA result for this semester?")}
+                          className="text-[10px] bg-white border border-gray-200 text-red-400 px-2 py-1 rounded hover:bg-red-50 hover:border-red-200"
+                        >Remove Result</button>
+                      </div>
+                    </div>
+                  )}
+                  {!semExam && semMarks.length > 0 && (
+                    <div className="px-4 py-2 bg-yellow-50 border-t border-yellow-100 flex justify-between items-center">
+                      <span className="text-[10px] text-yellow-600 italic">GPA/result not declared for this semester yet.</span>
+                      <button
+                        onClick={() => { setEditData({ Semester: sem }); setModal("exams"); }}
+                        className="text-[10px] bg-yellow-500 text-white px-2 py-1 rounded font-bold hover:bg-yellow-600"
+                      >+ Add Result</button>
+                    </div>
+                  )}
                 </div>
               );
             })}
           </div>
-        </Section>
+        </div>
 
 
         <Section 
@@ -416,21 +474,63 @@ export default function StudentDetail() {
           <AIMarksheetVerifyModal studentId={id} data={editData} onClose={() => { setModal(null); fetchAll(); }} />
         </Modal>
       )}
-      {modal === "editMark" && <EditMarkModal studentId={id} data={editData} onClose={() => { setModal(null); fetchAll(); }} />}
-      {modal === "editExam" && <EditExamModal data={editData} onClose={() => { setModal(null); fetchAll(); }} />}
-      {modal === "editFee"  && <EditFeeModal  data={editData} onClose={() => { setModal(null); fetchAll(); }} />}
-      {modal === "editMisc" && <EditMiscModal data={editData} onClose={() => { setModal(null); fetchAll(); }} />}
-      
+      {modal === "editMark"    && <EditMarkModal studentId={id} data={editData} onClose={() => { setModal(null); fetchAll(); }} />}
+      {modal === "editExam"    && <EditExamModal data={editData} onClose={() => { setModal(null); fetchAll(); }} />}
+      {modal === "editFee"     && <EditFeeModal  data={editData} onClose={() => { setModal(null); fetchAll(); }} />}
+      {modal === "editMisc"    && <EditMiscModal data={editData} onClose={() => { setModal(null); fetchAll(); }} />}
+      {modal === "renameSemester" && <RenameSemesterModal studentId={id} data={editData} onClose={() => { setModal(null); fetchAll(); }} />}
+      {modal === "addSubjectToSem" && <AddSubjectToSemModal studentId={id} defaultSem={editData?.semester} onClose={() => { setModal(null); fetchAll(); }} />}
+      {modal === "addNewSemesterSubject" && <AddSubjectToSemModal studentId={id} onClose={() => { setModal(null); fetchAll(); }} />}
+
       {modal === "editProfile" && (
-        <Modal title="Edit Student Profile" onClose={() => setModal(null)}>
-          <StudentForm form={form} onChange={handleChange} onSubmit={handleEdit} saving={saving} error={error} isEdit />
+        <Modal 
+          title="Edit Student Profile" 
+          onClose={() => setModal(null)} 
+          width={insight ? "max-w-5xl" : "max-w-md"}
+        >
+          <div className={insight ? "grid grid-cols-1 md:grid-cols-2 gap-8" : ""}>
+            <div className={insight ? "md:max-h-[600px] overflow-y-auto pr-2 scrollbar-thin" : ""}>
+              {insight && <div className="text-[10px] font-black text-gray-400 uppercase mb-4 tracking-widest">Update Information</div>}
+              <StudentForm form={form} onChange={handleChange} onSubmit={handleEdit} saving={saving} error={error} isEdit />
+            </div>
+            
+            {insight && (
+              <div className="flex flex-col h-[600px] bg-blue-50/30 rounded-2xl border border-blue-100 p-6 overflow-hidden">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-xs font-black text-blue-700 uppercase tracking-widest flex items-center gap-2">
+                    <span className="text-lg">✨</span> AI Reference Insight
+                  </h4>
+                </div>
+                <div className="flex-1 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-blue-200">
+                  <div className="prose prose-sm font-sans text-gray-700">
+                    {insight.split('\n').map((line, i) => {
+                      let cleaned = line.replace(/^\d+\.\s+###\s+/, '### ').replace(/^\*\*/, '').replace(/\*\*$/, '').replace(/\*\*(.*?)\*\*/g, '$1');
+                      
+                      if (cleaned.startsWith('### ')) {
+                        return <h3 key={i} className="text-sm font-bold text-blue-800 mt-4 mb-2 border-b border-blue-100 pb-1">{cleaned.replace('### ', '').replace(/\*/g, '')}</h3>;
+                      }
+                      if (cleaned.startsWith('- ') || cleaned.startsWith('* ')) {
+                        const content = cleaned.replace(/^[-*]\s+/, '').replace(/\*/g, '');
+                        return <div key={i} className="flex gap-2 items-start ml-2 mb-1 text-xs"><span className="text-blue-400 mt-1">•</span><span>{content}</span></div>;
+                      }
+                      
+                      return <p key={i} className={`text-xs ${cleaned.trim() === '' ? 'h-2' : 'mb-2'}`}>{cleaned.replace(/\*/g, '')}</p>;
+                    })}
+                  </div>
+                </div>
+                <div className="mt-4 pt-3 border-t border-blue-100 text-[9px] text-blue-400 italic font-medium">
+                  Use these insights to update relevant academic or disciplinary records accurately.
+                </div>
+              </div>
+            )}
+          </div>
         </Modal>
       )}
       
       {/* Add Modals */}
       {modal === "marks"  && <AddMarkModal    studentId={id} onClose={() => { setModal(null); fetchAll(); }} />}
       {modal === "fees"   && <AddFeeModal     studentId={id} onClose={() => { setModal(null); fetchAll(); }} />}
-      {modal === "exams"  && <AddExamModal    studentId={id} onClose={() => { setModal(null); fetchAll(); }} />}
+      {modal === "exams"  && <AddExamModal studentId={id} defaultSemester={editData?.Semester} onClose={() => { setModal(null); fetchAll(); }} />}
       {modal === "misc"   && <AddMiscModal    studentId={id} onClose={() => { setModal(null); fetchAll(); }} />}
     </div>
   );
@@ -495,15 +595,17 @@ function AIReceiptModal({ studentId, data, onClose }) {
   );
 }
 
-function Modal({ title, onClose, children }) {
+function Modal({ title, onClose, children, width = "max-w-md" }) {
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-        <div className="flex justify-between items-center px-6 py-4 border-b">
-          <h3 className="font-semibold text-gray-800">{title}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+      <div className={`bg-white rounded-2xl shadow-2xl w-full ${width} max-h-[95vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200`}>
+        <div className="flex justify-between items-center px-8 py-5 border-b bg-gray-50/50">
+          <h3 className="font-black text-gray-800 uppercase tracking-tight text-sm">{title}</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+            <svg size={20} fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
         </div>
-        <div className="px-6 py-4">{children}</div>
+        <div className="px-8 py-6 overflow-y-auto">{children}</div>
       </div>
     </div>
   );
@@ -515,6 +617,253 @@ function useForm(initial) {
   const [saving, setSaving] = useState(false);
   const onChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
   return { form, onChange, error, setError, saving, setSaving };
+}
+
+// ─── Inline-editable subject row ──────────────────────────────────────────────
+function SemSubjectRow({ mark, studentId, onUpdated }) {
+  const [editing, setEditing] = useState(false);
+  const [localMarks, setLocalMarks] = useState(String(mark.Marks));
+  const [localSubject, setLocalSubject] = useState(mark.Subject);
+  const [localCredits, setLocalCredits] = useState(String(mark.Credits));
+  const [saving, setSaving] = useState(false);
+
+  const grade = getGradeFromMarks(localMarks);
+
+  async function save() {
+    if (localSubject.trim() === "") return;
+    setSaving(true);
+    try {
+      // If subject name changed, we delete the old and create new
+      if (localSubject.trim() !== mark.Subject) {
+        await api.delete(`/students/${studentId}/marks/${encodeURIComponent(mark.Semester)}/${encodeURIComponent(mark.Subject)}`);
+        await api.post(`/students/${studentId}/marks`, {
+          Subject: localSubject.trim(),
+          Semester: mark.Semester,
+          Marks: parseInt(localMarks) || 0,
+          Grade: grade,
+          Credits: parseInt(localCredits) || 4,
+        });
+      } else {
+        await api.put(`/students/${studentId}/marks/${encodeURIComponent(mark.Semester)}/${encodeURIComponent(mark.Subject)}`, {
+          Marks: parseInt(localMarks) || 0,
+          Grade: grade,
+        });
+      }
+      setEditing(false);
+      onUpdated();
+    } catch (err) {
+      alert("Failed to save: " + (err.response?.data?.detail || err.message));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function remove() {
+    if (!window.confirm(`Delete "${mark.Subject}" from ${mark.Semester}?`)) return;
+    try {
+      await api.delete(`/students/${studentId}/marks/${encodeURIComponent(mark.Semester)}/${encodeURIComponent(mark.Subject)}`);
+      onUpdated();
+    } catch { alert("Delete failed"); }
+  }
+
+  if (editing) {
+    return (
+      <tr className="bg-blue-50/50">
+        <td className="px-4 py-2">
+          <input
+            className="w-full border border-blue-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-400"
+            value={localSubject}
+            onChange={e => setLocalSubject(e.target.value)}
+          />
+        </td>
+        <td className="px-4 py-2">
+          <input
+            type="number" min="0" max="100"
+            className="w-20 border border-blue-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-400"
+            value={localMarks}
+            onChange={e => setLocalMarks(e.target.value)}
+          />
+        </td>
+        <td className="px-4 py-2 font-bold text-blue-700">{grade}</td>
+        <td className="px-4 py-2">
+          <input
+            type="number" min="1" max="8"
+            className="w-16 border border-blue-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-400"
+            value={localCredits}
+            onChange={e => setLocalCredits(e.target.value)}
+          />
+        </td>
+        <td className="px-4 py-2 text-right">
+          <div className="flex justify-end gap-2">
+            <button onClick={save} disabled={saving} className="text-[10px] bg-blue-600 text-white px-2 py-1 rounded font-bold hover:bg-blue-700 disabled:opacity-50">
+              {saving ? "..." : "✓ Save"}
+            </button>
+            <button onClick={() => { setEditing(false); setLocalMarks(String(mark.Marks)); setLocalSubject(mark.Subject); }} className="text-[10px] bg-gray-100 text-gray-600 px-2 py-1 rounded font-bold hover:bg-gray-200">
+              Cancel
+            </button>
+          </div>
+        </td>
+      </tr>
+    );
+  }
+
+  return (
+    <tr className="hover:bg-gray-50 group">
+      <td className="px-4 py-2.5 font-medium text-gray-800">{mark.Subject}</td>
+      <td className="px-4 py-2.5 font-semibold">{mark.Marks}</td>
+      <td className="px-4 py-2.5">
+        <span className="font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded text-xs">{mark.Grade}</span>
+      </td>
+      <td className="px-4 py-2.5 text-gray-500 text-xs">{mark.Credits} cr</td>
+      <td className="px-4 py-2.5 text-right">
+        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button onClick={() => setEditing(true)} className="text-[10px] bg-gray-100 text-blue-600 px-2 py-1 rounded font-bold hover:bg-blue-50">✎ Edit</button>
+          <button onClick={remove} className="text-[10px] bg-gray-100 text-red-500 px-2 py-1 rounded font-bold hover:bg-red-50">✕</button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+// ─── Rename Semester Modal ─────────────────────────────────────────────────────
+function RenameSemesterModal({ studentId, data, onClose }) {
+  const [newName, setNewName] = useState(data?.semester || "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const oldName = data?.semester;
+
+  async function save() {
+    if (!newName.trim() || newName.trim() === oldName) { setError("Please enter a different name."); return; }
+    setSaving(true); setError("");
+    try {
+      await api.put(`/students/${studentId}/semesters/${encodeURIComponent(oldName)}/rename?new_name=${encodeURIComponent(newName.trim())}`);
+      onClose();
+    } catch (err) {
+      setError(err.response?.data?.detail || "Failed to rename semester");
+    } finally { setSaving(false); }
+  }
+
+  return (
+    <Modal title="Rename Semester" onClose={onClose}>
+      <div className="space-y-4">
+        <div>
+          <p className="text-xs text-gray-500 mb-3">Renaming will update <strong>all subjects and exam records</strong> for this semester.</p>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Current Name</label>
+          <div className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500">{oldName}</div>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">New Name</label>
+          <input
+            autoFocus
+            className="w-full border border-blue-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400"
+            value={newName}
+            onChange={e => setNewName(e.target.value)}
+            placeholder="e.g. Semester 3"
+          />
+        </div>
+        {error && <p className="text-red-500 text-sm">{error}</p>}
+        <div className="flex justify-end gap-3 pt-2">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-500 hover:underline">Cancel</button>
+          <button onClick={save} disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+            {saving ? "Renaming..." : "Rename Semester"}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+// ─── Add Subject to a Semester Modal ──────────────────────────────────────────
+function AddSubjectToSemModal({ studentId, defaultSem, onClose }) {
+  const [semester, setSemester] = useState(defaultSem || "Semester 1");
+  const [subject, setSubject] = useState("");
+  const [marks, setMarks] = useState("");
+  const [credits, setCredits] = useState("4");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const grade = getGradeFromMarks(marks);
+
+  async function save(e) {
+    e.preventDefault();
+    if (!semester.trim() || !subject.trim() || marks === "") { setError("Semester, Subject, and Marks are required."); return; }
+    setSaving(true); setError("");
+    try {
+      await api.post(`/students/${studentId}/marks`, {
+        Subject: subject.trim(),
+        Semester: semester.trim(),
+        Marks: parseInt(marks),
+        Grade: grade,
+        Credits: parseInt(credits) || 4,
+      });
+      onClose();
+    } catch (err) {
+      setError(err.response?.data?.detail || "Failed to add subject");
+    } finally { setSaving(false); }
+  }
+
+  return (
+    <Modal title={defaultSem ? `Add Subject to ${defaultSem}` : "Add Subject"} onClose={onClose}>
+      <form onSubmit={save} className="space-y-4">
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Semester</label>
+          <input
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400"
+            value={semester}
+            onChange={e => setSemester(e.target.value)}
+            placeholder="e.g. Semester 1"
+            readOnly={!!defaultSem}
+          />
+          {!defaultSem && <p className="text-[10px] text-gray-400 mt-1">Type a new or existing semester name.</p>}
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Subject Name</label>
+          <input
+            autoFocus={!!defaultSem}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400"
+            value={subject}
+            onChange={e => setSubject(e.target.value)}
+            placeholder="e.g. Data Structures"
+            required
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Marks (0–100)</label>
+            <input
+              type="number" min="0" max="100"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400"
+              value={marks}
+              onChange={e => setMarks(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Credits</label>
+            <input
+              type="number" min="1" max="8"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400"
+              value={credits}
+              onChange={e => setCredits(e.target.value)}
+            />
+          </div>
+        </div>
+        {marks !== "" && (
+          <div className="bg-blue-50 rounded-lg px-3 py-2 flex justify-between text-sm">
+            <span className="text-gray-500">Auto-calculated Grade:</span>
+            <span className="font-black text-blue-700">{grade}</span>
+          </div>
+        )}
+        {error && <p className="text-red-500 text-sm">{error}</p>}
+        <div className="flex justify-end gap-3 pt-1">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-gray-500 hover:underline">Cancel</button>
+          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+            {saving ? "Adding..." : "Add Subject"}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
 }
 
 function AIMarksheetVerifyModal({ studentId, data, onClose }) {
@@ -806,9 +1155,9 @@ function EditFeeModal({ data, onClose }) {
   );
 }
 
-function AddExamModal({ studentId, onClose }) {
+function AddExamModal({ studentId, defaultSemester, onClose }) {
   const { form, onChange, error, setError, saving, setSaving } = useForm({
-    Semester: "Semester 1", GPA: "", ResultStatus: "Pass", DateReleased: ""
+    Semester: defaultSemester || "Semester 1", GPA: "", ResultStatus: "Pass", DateReleased: ""
   });
 
   async function submit(e) {

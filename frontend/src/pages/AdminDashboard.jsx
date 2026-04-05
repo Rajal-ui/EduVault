@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
+import AnalyticsPanel from "../components/AnalyticsPanel";
+import ActivityFeed from "../components/ActivityFeed";
+import NotificationBell from "../components/NotificationBell";
+import { LayoutDashboard, Users as UsersIcon, Activity } from "lucide-react";
 
 const emptyForm = {
   StudentID: "", Name: "", Department: "", Year: "",
@@ -14,12 +18,14 @@ export default function AdminDashboard() {
   const [showAdd, setShowAdd] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showDelete, setShowDelete] = useState(null);
+  const [showReset, setShowReset] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [aiQuery, setAiQuery] = useState("");
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [activeTab, setActiveTab] = useState("students");
   const name = localStorage.getItem("name");
   const navigate = useNavigate();
 
@@ -128,93 +134,133 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-blue-700 text-white px-6 py-4 flex justify-between items-center">
-        <h1 className="text-lg font-bold">EduVault — Admin</h1>
+    <div className="min-h-screen bg-gray-50 text-gray-900">
+      <header className="bg-blue-700 text-white px-6 py-4 flex justify-between items-center shadow-lg sticky top-0 z-40">
+        <div className="flex items-center gap-6">
+          <h1 className="text-xl font-black tracking-tight uppercase">EduVault</h1>
+          <nav className="flex gap-1 bg-blue-800/50 p-1 rounded-lg">
+            <button 
+              onClick={() => setActiveTab("students")}
+              className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-bold transition-all ${activeTab === 'students' ? 'bg-white text-blue-700 shadow' : 'text-blue-100 hover:bg-blue-700'}`}
+            >
+              <UsersIcon size={16} /> Students
+            </button>
+            <button 
+              onClick={() => setActiveTab("analytics")}
+              className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-bold transition-all ${activeTab === 'analytics' ? 'bg-white text-blue-700 shadow' : 'text-blue-100 hover:bg-blue-700'}`}
+            >
+              <LayoutDashboard size={16} /> Analytics
+            </button>
+            <button 
+              onClick={() => setActiveTab("activity")}
+              className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-bold transition-all ${activeTab === 'activity' ? 'bg-white text-blue-700 shadow' : 'text-blue-100 hover:bg-blue-700'}`}
+            >
+              <Activity size={16} /> Activity
+            </button>
+          </nav>
+        </div>
         <div className="flex items-center gap-4">
-          <span className="text-sm">{name}</span>
-          <button onClick={logout} className="text-sm bg-white text-blue-700 px-3 py-1 rounded-lg font-medium">Logout</button>
+          <NotificationBell />
+          <span className="text-sm font-medium opacity-90">{name}</span>
+          <button onClick={logout} className="text-sm bg-white/10 hover:bg-white/20 text-white border border-white/20 px-4 py-1.5 rounded-lg font-bold transition-colors">Logout</button>
         </div>
       </header>
 
-      <main className="p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-gray-800">All Students</h2>
-          <div className="flex gap-2">
-            {/* AI Search Bar */}
-            <form onSubmit={handleAISearch} className="flex gap-2 mr-4">
-               <div className="relative">
-                 <input 
-                   type="text" 
-                   placeholder="✨ Ask AI (e.g. 'IT students with pending fees')..." 
-                   className="w-80 border border-purple-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 pl-10"
-                   value={aiQuery}
-                   onChange={(e) => setAiQuery(e.target.value)}
-                 />
-                 <span className="absolute left-3 top-2.5 text-purple-400">🔍</span>
-               </div>
-               <button 
-                 type="submit" 
-                 disabled={isAiLoading}
-                 className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50"
-               >
-                 {isAiLoading ? "Thinking..." : "Ask AI"}
-               </button>
-            </form>
-
-            <button onClick={handleExport} className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700">
-              Export CSV
-            </button>
-            <label className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-700 cursor-pointer flex items-center">
-              {uploading ? "Uploading..." : "Import CSV"}
-              <input type="file" accept=".csv" className="hidden" onChange={handleImport} disabled={uploading} />
-            </label>
-            <button onClick={openAdd} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
-              + Add Student
-            </button>
-          </div>
-        </div>
-
-        {loading ? (
-          <p className="text-gray-500">Loading...</p>
+      <main className="p-6 max-w-[1400px] mx-auto">
+        {activeTab === "analytics" ? (
+          <AnalyticsPanel />
+        ) : activeTab === "activity" ? (
+          <div className="max-w-4xl mx-auto"><ActivityFeed /></div>
         ) : (
-          <div className="bg-white rounded-xl shadow overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-100 text-gray-600 uppercase text-xs">
-                <tr>
-                  <th className="px-4 py-3 text-left">ID</th>
-                  <th className="px-4 py-3 text-left">Name</th>
-                  <th className="px-4 py-3 text-left">Department</th>
-                  <th className="px-4 py-3 text-left">Year</th>
-                  <th className="px-4 py-3 text-left">Fee Status</th>
-                  <th className="px-4 py-3 text-left">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {students.map((s) => (
-                  <tr key={s.StudentID} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-mono text-gray-500">{s.StudentID}</td>
-                    <td
-                      className="px-4 py-3 font-medium text-blue-600 cursor-pointer hover:underline"
-                      onClick={() => navigate(`/admin/student/${s.StudentID}`)}
-                    >{s.Name}</td>
-                    <td className="px-4 py-3 text-gray-600">{s.Department}</td>
-                    <td className="px-4 py-3 text-gray-600">Year {s.Year}</td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        s.FeeStatus === "Paid" ? "bg-green-100 text-green-700" :
-                        s.FeeStatus === "Pending" ? "bg-yellow-100 text-yellow-700" :
-                        "bg-red-100 text-red-700"}`}>{s.FeeStatus}</span>
-                    </td>
-                    <td className="px-4 py-3 flex gap-2">
-                      <button onClick={() => openEdit(s)} className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-lg">Edit</button>
-                      <button onClick={() => setShowDelete(s)} className="text-xs bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1 rounded-lg">Delete</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-black text-gray-800 uppercase tracking-tight">Student Records</h2>
+              <div className="flex gap-3">
+                {/* AI Search Bar */}
+                <form onSubmit={handleAISearch} className="flex gap-2 mr-4">
+                   <div className="relative">
+                     <input 
+                       type="text" 
+                       placeholder="✨ Ask AI (e.g. 'CS students with overdue fees')..." 
+                       className="w-96 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 pl-10 shadow-sm"
+                       value={aiQuery}
+                       onChange={(e) => setAiQuery(e.target.value)}
+                     />
+                     <span className="absolute left-3 top-3 text-blue-400">🔍</span>
+                   </div>
+                   <button 
+                     type="submit" 
+                     disabled={isAiLoading}
+                     className="bg-blue-600 text-white px-6 py-2.5 rounded-xl text-sm font-black uppercase tracking-wider hover:bg-blue-700 shadow-md transition-all disabled:opacity-50"
+                   >
+                     {isAiLoading ? "Thinking..." : "Search"}
+                   </button>
+                </form>
+
+                <div className="h-10 w-px bg-gray-200 mx-2" />
+
+                <button onClick={handleExport} className="bg-white text-gray-700 border border-gray-200 px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-gray-50 shadow-sm">
+                  Export
+                </button>
+                <label className="bg-white text-gray-700 border border-gray-200 px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-gray-50 cursor-pointer shadow-sm flex items-center">
+                  {uploading ? "..." : "Import"}
+                  <input type="file" accept=".csv" className="hidden" onChange={handleImport} disabled={uploading} />
+                </label>
+                <button onClick={openAdd} className="bg-blue-600 text-white px-6 py-2.5 rounded-xl text-sm font-black uppercase tracking-wider hover:bg-blue-700 shadow-lg transition-transform active:scale-95">
+                  + Add New
+                </button>
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="flex justify-center py-20">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700" />
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-10">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50/50 text-gray-400 uppercase text-[10px] font-black tracking-widest border-b">
+                    <tr>
+                      <th className="px-6 py-4 text-left">Internal ID</th>
+                      <th className="px-6 py-4 text-left">Full Name</th>
+                      <th className="px-6 py-4 text-left">Department</th>
+                      <th className="px-6 py-4 text-left">Year</th>
+                      <th className="px-6 py-4 text-left">Financial Status</th>
+                      <th className="px-6 py-4 text-right">Administrative</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {students.map((s) => (
+                      <tr key={s.StudentID} className="hover:bg-blue-50/30 transition-colors group">
+                        <td className="px-6 py-4 font-mono text-xs text-gray-400">{s.StudentID}</td>
+                        <td
+                          className="px-6 py-4 font-bold text-gray-800 cursor-pointer group-hover:text-blue-600 transition-colors"
+                          onClick={() => navigate(`/admin/student/${s.StudentID}`)}
+                        >{s.Name}</td>
+                        <td className="px-6 py-4 text-gray-600 font-medium">{s.Department}</td>
+                        <td className="px-6 py-4 text-gray-600">
+                           <span className="bg-gray-100 px-2 py-1 rounded text-xs font-bold text-gray-500">YEAR {s.Year}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                            s.FeeStatus === "Paid" ? "bg-green-100 text-green-700" :
+                            s.FeeStatus === "Pending" ? "bg-yellow-100 text-yellow-700" :
+                            "bg-red-100 text-red-700"}`}>{s.FeeStatus}</span>
+                        </td>
+                        <td className="px-6 py-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex gap-2 justify-end">
+                            <button onClick={() => openEdit(s)} className="text-xs bg-white border border-gray-200 hover:border-blue-300 text-gray-600 px-3 py-1.5 rounded-lg font-bold">Manage</button>
+                            <button onClick={() => setShowReset(s)} className="text-xs bg-white border border-gray-200 hover:border-yellow-300 text-yellow-600 px-3 py-1.5 rounded-lg font-bold">Reset Pwd</button>
+                            <button onClick={() => setShowDelete(s)} className="text-xs bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded-lg font-bold">Remove</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
         )}
       </main>
 
@@ -233,6 +279,12 @@ export default function AdminDashboard() {
       )}
 
       
+      {showReset && (
+        <Modal title="Reset Student Password" onClose={() => setShowReset(null)}>
+          <ResetPasswordModal user={showReset} onClose={() => setShowReset(null)} />
+        </Modal>
+      )}
+
       {showDelete && (
         <Modal title="Delete Student" onClose={() => setShowDelete(null)}>
           <p className="text-gray-600 mb-6">

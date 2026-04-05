@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
+import NotificationBell from "../components/NotificationBell";
 
 export default function StudentDashboard() {
   const [student, setStudent] = useState(null);
@@ -9,10 +10,10 @@ export default function StudentDashboard() {
   const [exams, setExams] = useState([]);
   const navigate = useNavigate();
 
-  const studentId = localStorage.getItem("name"); // we'll refine this later
+  const studentId = localStorage.getItem("name"); 
 
   useEffect(() => {
-    // Decode student ID from token instead of name
+    
     const token = localStorage.getItem("token");
     if (!token) return;
     const payload = JSON.parse(atob(token.split(".")[1]));
@@ -43,8 +44,9 @@ export default function StudentDashboard() {
       <header className="bg-blue-700 text-white px-6 py-4 flex justify-between items-center">
         <h1 className="text-lg font-bold">EduVault — Student</h1>
         <div className="flex items-center gap-4">
-          <span className="text-sm">{student.Name}</span>
-          <button onClick={logout} className="text-sm bg-white text-blue-700 px-3 py-1 rounded-lg font-medium">
+          <NotificationBell />
+          <span className="text-sm font-medium">{student.Name}</span>
+          <button onClick={logout} className="text-sm bg-white text-blue-700 px-3 py-1 rounded-lg font-medium hover:bg-blue-50 transition-colors">
             Logout
           </button>
         </div>

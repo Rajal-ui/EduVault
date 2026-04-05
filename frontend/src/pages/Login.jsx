@@ -18,12 +18,17 @@ export default function Login() {
       const res = await api.post("/auth/login", {
         user_id: userId,
         password,
-        role,
+        role: role === "faculty" || role === "hod" ? "faculty" : role,
       });
       localStorage.setItem("token", res.data.access_token);
+      localStorage.setItem("refresh_token", res.data.refresh_token);
       localStorage.setItem("role", res.data.role);
       localStorage.setItem("name", res.data.name);
-      navigate(role === "admin" ? "/admin" : "/student");
+      
+      const userRole = res.data.role;
+      if (userRole === "admin") navigate("/admin");
+      else if (userRole === "student") navigate("/student");
+      else if (userRole === "faculty" || userRole === "hod") navigate("/faculty");
     } catch (err) {
       setError(err.response?.data?.detail || "Login failed");
     } finally {
@@ -37,12 +42,13 @@ export default function Login() {
         <h1 className="text-2xl font-bold text-center text-blue-700 mb-6">EduVault</h1>
 
         <div className="flex mb-6 rounded-lg overflow-hidden border border-gray-200">
-          {["admin", "student"].map((r) => (
+          {["admin", "student", "faculty"].map((r) => (
             <button
               key={r}
+              type="button"
               onClick={() => setRole(r)}
-              className={`flex-1 py-2 text-sm font-medium capitalize transition-colors ${
-                role === r ? "bg-blue-600 text-white" : "bg-white text-gray-500 hover:bg-gray-50"
+              className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-all ${
+                role === r ? "bg-blue-600 text-white shadow-inner" : "bg-white text-gray-400 hover:bg-gray-50"
               }`}
             >
               {r}
@@ -52,15 +58,15 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {role === "admin" ? "Admin ID" : "Student ID"}
+            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
+              {role === "admin" ? "Admin Identifier" : role === "faculty" ? "Faculty ID" : "Student ID"}
             </label>
             <input
               type="text"
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
-              placeholder={role === "admin" ? "ADM001" : "STU001"}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder={role === "admin" ? "ADM001" : role === "faculty" ? "FAC001" : "STU001"}
+              className="w-full border border-gray-100 bg-gray-50/50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium"
               required
             />
           </div>

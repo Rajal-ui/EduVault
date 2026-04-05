@@ -1,0 +1,44 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: eduvault-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: bvp_student_office
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/setup.sql:/docker-entrypoint-initdb.d/setup.sql
+
+  backend:
+    build: 
+        context: ./backend
+    container_name: eduvault-api
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_USER=root
+      - DB_PASSWORD=root
+      - DB_HOST=db
+      - DB_NAME=bvp_student_office
+      - SECRET_KEY=your_very_secret_key_here
+      - ALGORITHM=HS256
+      - ALLOWED_ORIGINS=http://localhost:5173,http://localhost:80
+    depends_on:
+      - db
+
+  frontend:
+    build: 
+        context: ./frontend
+    container_name: eduvault-web
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:

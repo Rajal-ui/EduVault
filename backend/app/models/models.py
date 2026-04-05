@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Text, Date, DateTime, Enum, DECIMAL, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, String, Integer, Text, Date, DateTime, Enum, DECIMAL, ForeignKey, UniqueConstraint, func
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -10,6 +10,18 @@ class Admin(Base):
     Department = Column(String(50))
     Contact    = Column(String(100))
     Password   = Column(String(255), nullable=False)
+
+
+class Faculty(Base):
+    __tablename__ = "Faculty"
+
+    FacultyID  = Column(String(20), primary_key=True)
+    Name       = Column(String(100), nullable=False)
+    Department = Column(String(50), nullable=False)
+    Role       = Column(Enum("faculty", "hod"), default="faculty")
+    Contact    = Column(String(100))
+    Password   = Column(String(255), nullable=False)
+    CreatedAt  = Column(DateTime, server_default=func.now())
 
 
 class Student(Base):
