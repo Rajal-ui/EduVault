@@ -1,0 +1,9 @@
+StudentID,Name,Department,Year,Contact,AcademicRecord,FeeStatus,DateOfBirth,Address,ParentContact,StudentPhone
+STU001,Rajal Mistry,Computer Science,2,rajal@gmail.com,"Excellent academic performance, no disciplinary issues.",Paid,2005-11-29,"123 Main St, Anytown",+91 5558775523,+91 8986666242
+STU002,Ronak Shetty,Electronics Engineering,3,ronaks@email.com,"Good standing, participated in tech fests.",Pending,2003-11-20,"Dhankawadi, Pune -Solapur road, Pune, Maharashtra",+91 9652144555,+91 5853285888
+STU003,Priyansh Patel,Computer Science,2,ppatel1@gmail.com,Outstanding,Paid,2005-11-16,"Ahmedabad, Gujarat",2924714041,+91 2527574871
+STU004,Mohit Kunwar,IT,1,mohit123k@gmail.com,"Good standing, participated in tech fests.",Paid,2007-04-03,"Pune, Maharashtra",8745415541,+91 5457757788
+STU005,Sachin Kumar,CSE,1,Skumar@gmail.com,"Average performance
+",Pending,2007-02-04,Gurgaon,7485415255,+91 5557757522
+STU006,Akansha Shah,Computer Science,3,shah42@gmail.com,"Outstanding 
+",Paid,2006-06-05,"Surat, Gujarat",8986666245,+91 5252568627
