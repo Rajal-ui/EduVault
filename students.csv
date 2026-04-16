@@ -1,6 +1,0 @@
-StudentID,Name,Department,Year,Contact,AcademicRecord,FeeStatus,DateOfBirth,Address,ParentContact
-STU001,Rajal Mistry,Computer Science,2,rajal@gmail.com,"Excellent academic performance, no disciplinary issues.",Paid,29-11-2005,"123 Main St, Anytown",555-1234
-STU002,Kaavya Sarin,Electronics Engineering,3,kaavya@email.com,"Good standing, participated in tech fests.",Pending,20-11-2003,"456 Oak Ave, Othercity",555-5678
-STU003,Priyansh Patel,Computer Science,2,ppatel1@gmail.com,Outstanding,Paid,16-11-2005,"Ahmedabad, Gujarat",9985462333
-STU004,Mohit Kunwar,IT,1,mohit123k@gmail.com,"Good standing, participated in tech fests.",Paid,03-04-2007,Pune,8745415541
-STU005,Sachin Kumar,CSE,1,Skumar@gmail.com,"Excellent academic performance, no disciplinary issues.",Pending,04-02-2007,Gurgaon,7485415255
